@@ -64,6 +64,8 @@
     
     * googlefinance
     
+      * 參考datasource
+    
     * [grs ](https://github.com/toomore/grs) 
     
       * > grs 台灣上市上櫃股票價格擷取
@@ -85,7 +87,7 @@
 * 與其用那個爛東西，不如直接看拿到的資料是否有相關日期
 * 還要考慮timezone, 日光時間等問題，所以比較時，最好用完整的datetime
 
-# structure
+# structure 推論
 
 > 有沒有現成的？
 
@@ -130,8 +132,7 @@ data at 外網我覺得不用想太多，因為那怕是花大錢提升外網速
 
 * > 至於real time 的 query 我覺得還是純用永api，因為資料量不大。
 
-* 更正，可能還是要用自己的，原因在於kbar query 限制，kbar 的query 一次只能query 一檔股票，且500/5s，台股有1k檔，所以要10s。這個情況可能還不如用yfinance。
-
+  * 更正，可能還是要用自己的，原因在於永api kbar query 限制，kbar 的query 一次只能query 一檔股票，且500/5s，台股有1k檔，所以要10s。這個情況可能還不如用yfinance。
   * 而且kbar 無法直接query mulit stock +時K+streaming 功能。只能說我認為直接用純api query 可行是正確的，但是手上的永API還不達標。
 
 * [Python: How to Get Live Market Data (Less Than 0.1-Second Lag).](https://towardsdatascience.com/python-how-to-get-live-market-data-less-than-0-1-second-lag-c85ee280ed93)
@@ -142,9 +143,11 @@ data at 外網我覺得不用想太多，因為那怕是花大錢提升外網速
 
 
 
+
+
 * 分時日K的資料可能分開存比較好，像yfinance的週期不一，可能就是因為分開存
 
-  * 壞處是更多硬碟，好處是資料不相關，比較連帶出錯
+  * 壞處是更多硬碟，好處是資料不相關，比較不會連帶出錯
   * 如果之後有什麼發現再改回用分K算
 
 * 錯過資料如何補齊
@@ -153,13 +156,13 @@ data at 外網我覺得不用想太多，因為那怕是花大錢提升外網速
 
 * 如果連real time 都從self db抽資料，要如何確定已存入db。（目前原訂是直接從yfinance polling）
 
-  * > 這個問題在 web 也考慮過，終級辦法只有websocket
+  * > 這個問題在 web 也討論過，終級辦法只有websocket
 
   * done signal
 
     * 比如一但update 就在某table 裡insert time stamp，然後trigger signal to stream
-    * 比較正確的方法，比如是insert sucess 會回傳signal ，可是回傳signal 了話就會變成需要子程式要由母程式執行
-      * **或是Interprocess Communication（IPC）**
+    * 比較正確的方法，比如是insert sucess 會回傳signal ，可是回傳signal 了話就會變成子程式（crawler+api）要由母程式（stock decision program）執行
+      * **或是Interprocess Communication（IPC）** ，沒有這個限制
         * [asyncio Streams](https://docs.python.org/3/library/asyncio-stream.html#asyncio-streams)
 
   * 如果比分K大很多，那sum 起來如果有缺影響不大。但是分K（最小單位）就無法這樣做
@@ -238,6 +241,8 @@ Python 的ipc
   * 這個應該是TCP version的
   * tcp 不能直接對 socket 去send or receive, 要對connection
 
+討論到這裡我覺得很明顯了，local backend server with websocket。雖然socket 就夠了，但用server+websocket的努力更少，擴充性更好。
+
 # Asynchronous Web Frameworks server + websocket
 
 * [ 2020年是时候更新你的技术武器库了:Asgi vs Wsgi(FastAPI vs Flask) ](https://juejin.cn/post/6854573215314870285)
@@ -258,10 +263,97 @@ Python 的ipc
   * Starlette
     * [broadcaster](https://github.com/encode/broadcaster)
     * ASGI ，更新WSGI ，加入async 功能? 不太確定到底有什麼差
-
-# dataManager
-
-> 之後會獨立publish 出來
+  * 常使用uvicorn當server
 
 
 
+# structure
+
+條件準備好了 [fastapi WebSockets](https://fastapi.tiangolo.com/advanced/websockets/)，目前只差如何把crawler 和 api server 整合。
+
+> 其實兩者可以算獨立的program，可以看出api server的設計本來就不會考慮整合crawler。我之所以會想用1個process (甚至 1thread) ，是這已經完全足夠使用，之後要分也不難，最重要的是簡單（by signal）。
+
+想錯 server 的功用了，完全無需整合，如果crawler 也是 server 的一個client (WebSocket Client)就好。
+
+server 主管data input& output，所以crawler 的資料也是傳給server by API做儲存。至於broadcast的部份，可以基於`ConnectionManager` 1. 直接broadcast 資料給基它client，或是 2. crawler本身有一個專用的API，去notify `ConnectionManager` 去撈db並broadcast。後者理論上是一個更好的選擇，可以避免其它非 crawler client 傳送錯誤資料。
+
+一堆不同API？GraphQL解決? 比如說只有要0050的股票或全部股票都要。但還要再加上graphQL 太累了，而且沒有明顯優勢，這次不弄了。
+
+要有什麼API？
+
+* 從code_name 得到exchage id, 從exchange_id 得到 stocks，從stocks和input symbols得到partial stocks，用stocks id 加上start & end取得kbars（參考yfinance 和 永api）
+
+  * ```python
+    kbars = api.kbars_hr([Stocks("2330", "TPE"), Stocks("2409", "TPE")], start="2020-06-01", end="2020-07-01")
+    ```
+
+* websocket ，1hr 內的kbar 自動給出
+
+  * ```python
+    kbars= api.stream_kbars_hr([Stocks("2330", "TPE"), Stocks("2409", "TPE")] )
+    ```
+
+* 每1hr 蒐集資料給db
+
+  * ```python
+    api.create_kbars_hr([StockKHrCreate("2330", "TPE",230, 249...), StockKHrCreate("2409", "TPE", 13, 14...)])
+    ```
+
+* notify 每hr的websocket
+
+  * ```
+    api.notify_kbars_hr()
+    ```
+
+  * 只能有一個client，否則會亂notify
+
+未了支撐上面，要有一些基本功能
+
+* create exchange
+* create stocks
+
+到底應不應該為了特定api而做對應的db qeury function？答案是要，比例大約8:2，2成是一些基本的checking，比如該資料是否存在 ，checking 是 api router 的事， 不是 db query 的事。
+等到要query 主要的一大串資料是就要專用 db query function (8成)，原因在於如果沒有一開始就減少拿到的資料，很多query資料量很可能是可以直接塞爆memory的，而且龐大的資料要送來backend server 這裡（可能不在同一個電腦），也是一個問題。
+
+比較麻煩的是如果api 很多就要寫很多不同query，而且create 1個和create 很多個的api 也不同，特別是restapi 其實並不支援bulk create > Although bulk operations (e.g. batch create) are essential in many  systems, they are not formally addressed by the RESTful architecture  style.。然而create kbars 本身就會同時需要 create 好幾個rows，所以這個功能又是必要的。
+
+* [RESTful way to create multiple items in one request](https://stackoverflow.com/questions/411462/restful-way-to-create-multiple-items-in-one-request)
+
+  * it's worth it to send 100 POST requests to the server. 
+  * 用 POST /orders，然後要用 transaction，而且要check 每一個元素是否valid
+  * [facebook batch request](https://developers.facebook.com/docs/graph-api/batch-requests)
+    * 這只是把個別的query 在json 裡分開然後一起送
+
+* [Create Multiple Records | REST API Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/dome_composite_sobject_tree_flat.htm)
+
+  * > ```bash
+    > curl https://yourInstance.salesforce.com/services/data/v53.0/composite/tree/Account/ -H "Authorization: Bearer token -H "Content-Type: application/json" -d "@newrecords.json"
+    > ```
+
+    * composite 後面才是一般restful api url
+    * url裡有compostie這一項
+
+  * [REST Resources and Requests](https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/intro_rest_resources.htm)
+
+    * > ```url
+      > https://MyDomainName.my.salesforce.com/services/data/vXX.X/resource/
+      > ```
+
+    * resource 就是一般restful api url, e.g. users, orders
+
+這個是restful api 的example，可以看到resources 是一定要加s的，但get 是拿一整組，post，是指create一個
+
+* [wiki 表現層狀態轉換](https://zh.wikipedia.org/zh-tw/%E8%A1%A8%E7%8E%B0%E5%B1%82%E7%8A%B6%E6%80%81%E8%BD%AC%E6%8D%A2#%E6%87%89%E7%94%A8%E6%96%BCWeb%E6%9C%8D%E5%8B%99)
+* delete 沒有 response body
+  * [RESTful - What should a DELETE response body contain](https://stackoverflow.com/questions/25970523/restful-what-should-a-delete-response-body-contain/50792918)
+
+問題
+
+* 同時get 太多資料，同時太多的kbars可能會讓memory （client or server）爆掉。通常是需要position 去取接下來的data。
+  * 現在先不管吧，這個太難了
+  * [[QUESTION\] Querying large tables · Issue #1269 - GitHub](https://github.com/tiangolo/fastapi/issues/1269)
+  * backtest可以避開e.g. ，新的週期，才 query 下次的N個data
+
+
+
+* [透過網路交換資料的方式（SOAP 和RESTful API）](https://saffranblog.coderbridge.io/2021/02/06/soap-and-restful-api/)

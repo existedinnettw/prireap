@@ -6,10 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, Enum, Numeric, DateTime, Sequence  # , Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.orm import sessionmaker
-
-Base = declarative_base()
+from sqlalchemy.orm import relationship, backref, validates, sessionmaker
+from .database import Base, SessionLocal, engine
 
 
 load_dotenv()
@@ -17,10 +15,19 @@ load_dotenv()
 
 
 class Exchange(Base):
+    '''
+    code_name: e.g. TPE
+    '''
     __tablename__ = 'exchange'
     id = Column(Integer, Sequence('exg_id_seq'), primary_key=True)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False, unique=True)
     code_name = Column(String, nullable=False, unique=True)
+
+    stocks=relationship("Stock", back_populates="exchange")
+
+    @validates('code_name')
+    def convert_upper(self, key, value):
+        return value.upper()
 
 
 class Stock(Base):
@@ -28,6 +35,7 @@ class Stock(Base):
     id = Column(Integer, Sequence('stock_id_seq'), primary_key=True)
     symbol = Column(String, nullable=False)  # e.g. 2330, GOOGL
     exchange_id = Column(Integer, ForeignKey('exchange.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    exchange=relationship("Exchange", back_populates="stocks")
     # adr parent id
     UniqueConstraint('symbol', 'exchange_id', name='uq_sym_exg')
 
@@ -87,24 +95,22 @@ class StockKDay(Base):
 
 
 if __name__ == '__main__':
-    engine = create_engine( os.getenv('DB_URL') )  # link to market data db
-    Session = sessionmaker(engine)
-    session = Session()
 
-    # drop table if exist
-    Base.metadata.drop_all(engine, tables=[
-                           Exchange.__table__, Stock.__table__, StockKMin.__table__, StockKHour.__table__, StockKDay.__table__], checkfirst=True)
-    Base.metadata.create_all(engine)  # create table
+    # # drop table if exist
+    # Base.metadata.drop_all(engine, tables=[
+    #                        Exchange.__table__, Stock.__table__, StockKMin.__table__, StockKHour.__table__, StockKDay.__table__], checkfirst=True)
+    Base.metadata.create_all(bind=engine, checkfirst=True )  # create table
 
-    # insert
-    session.add(Exchange(name='台灣證券交易所', code_name='TPE') )
-    session.add(Stock(exchange_id=1, symbol='2330'))
-    session.commit()
+    with SessionLocal() as session:
+        # insert
+        session.add(Exchange(name='台灣證券交易所', code_name='TPE') )
+        session.add(Stock(exchange_id=1, symbol='2330'))
+        session.commit()
 
-    rows = session.query(Exchange)
-    # row=rows[0]
-    # print(row.fee ,row.loan)
-    print(rows)
-    for row in rows:
-        print(row.id,row.name,row.code_name)
-        # print(row.product_id, row.deal_dt, row.price, row.qty, row.trade_type, row.total_price)
+        rows = session.query(Exchange)
+        # row=rows[0]
+        # print(row.fee ,row.loan)
+        print(rows)
+        for row in rows:
+            print(row.id,row.name,row.code_name)
+            # print(row.product_id, row.deal_dt, row.price, row.qty, row.trade_type, row.total_price)
