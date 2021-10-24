@@ -1,5 +1,5 @@
 import uvicorn
-#--------------
+# --------------
 from typing import List
 from sqlalchemy.orm import Session
 
@@ -9,19 +9,22 @@ from . import schemas, crud, models
 from .database import SessionLocal, engine
 from typing import List, Optional
 import datetime
-from .routers import exchanges
+from .routers import exchanges, compositeExchanges, stocks, stockKMins
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 # Dependency
+
+
 def get_db():
-    db=SessionLocal()
+    db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
 
 html = """
 <!DOCTYPE html>
@@ -99,8 +102,11 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         await manager.broadcast(f"Client #{client_id} left the chat")
-#===================================================================================
+# ===================================================================================
 app.include_router(exchanges.router)
+app.include_router(compositeExchanges.router)
+app.include_router(stocks.router)
+app.include_router(stockKMins.router)
 
 
 # @app.post("/kbars_hr")
@@ -116,11 +122,12 @@ app.include_router(exchanges.router)
 #         pass
 
 @app.post("/create_kbars_hr")
-def create_kbars_hr(stk_k_hr_li:List[schemas.StockKBar]):
+def create_kbars_hr(stk_k_hr_li: List[schemas.StockKBar]):
     return
 
+
 @app.websocket("/ws/notify_kbars_hr")
-async def notify_kbars_hr(ws:WebSocket):
+async def notify_kbars_hr(ws: WebSocket):
     try:
         while True:
             pass
@@ -128,7 +135,7 @@ async def notify_kbars_hr(ws:WebSocket):
         pass
 
 
-#==========================================================================
+# ==========================================================================
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000,
                 log_level="info", reload=True)

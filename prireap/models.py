@@ -23,7 +23,7 @@ class Exchange(Base):
     name = Column(String, nullable=False, unique=True)
     code_name = Column(String, nullable=False, unique=True)
 
-    stocks=relationship("Stock", back_populates="exchange")
+    stocks = relationship("Stock", back_populates="exchange")
 
     @validates('code_name')
     def convert_upper(self, key, value):
@@ -31,11 +31,17 @@ class Exchange(Base):
 
 
 class Stock(Base):
+    '''
+    symbol: 2330, GOOGL, APPL
+    name: 台積電, 精英, apple inc
+    '''
     __tablename__ = 'stock'
     id = Column(Integer, Sequence('stock_id_seq'), primary_key=True)
     symbol = Column(String, nullable=False)  # e.g. 2330, GOOGL
-    exchange_id = Column(Integer, ForeignKey('exchange.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
-    exchange=relationship("Exchange", back_populates="stocks")
+    name = Column(String, nullable=True)
+    exchange_id = Column(Integer, ForeignKey(
+        'exchange.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    exchange = relationship("Exchange", back_populates="stocks")
     # adr parent id
     UniqueConstraint('symbol', 'exchange_id', name='uq_sym_exg')
 
@@ -43,15 +49,16 @@ class Stock(Base):
 class StockKMin(Base):
     __tablename__ = 'stock_k_min'
     id = Column(Integer, Sequence('kmin_id_seq'), primary_key=True)
-    stock_id = Column(Integer, ForeignKey('stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    stock_id = Column(Integer, ForeignKey(
+        'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
     volume = Column(Integer, nullable=False)
     turnover = Column(Integer, nullable=False)
-    open = Column(Numeric(precision=2), nullable=False)
-    high = Column(Numeric(precision=2), nullable=False)
-    low = Column(Numeric(precision=2), nullable=False)
-    close = Column(Numeric(precision=2), nullable=False)
+    open = Column(Numeric(scale=2), nullable=False)
+    high = Column(Numeric(scale=2), nullable=False)
+    low = Column(Numeric(scale=2), nullable=False)
+    close = Column(Numeric(scale=2), nullable=False)
     n_deals = Column(Integer, nullable=True)  # api may not have such data
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
@@ -61,15 +68,16 @@ class StockKMin(Base):
 class StockKHour(Base):
     __tablename__ = 'stock_k_hr'
     id = Column(Integer, Sequence('khr_id_seq'), primary_key=True)
-    stock_id = Column(Integer, ForeignKey('stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    stock_id = Column(Integer, ForeignKey(
+        'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
     volume = Column(Integer, nullable=False)
     turnover = Column(Integer, nullable=False)
-    open = Column(Numeric(precision=2), nullable=False)
-    high = Column(Numeric(precision=2), nullable=False)
-    low = Column(Numeric(precision=2), nullable=False)
-    close = Column(Numeric(precision=2), nullable=False)
+    open = Column(Numeric(scale=2), nullable=False)
+    high = Column(Numeric(scale=2), nullable=False)
+    low = Column(Numeric(scale=2), nullable=False)
+    close = Column(Numeric(scale=2), nullable=False)
     n_deals = Column(Integer, nullable=True)  # api may not have such data
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
@@ -79,15 +87,16 @@ class StockKHour(Base):
 class StockKDay(Base):
     __tablename__ = 'stock_k_day'
     id = Column(Integer, Sequence('kday_id_seq'), primary_key=True)
-    stock_id = Column(Integer, ForeignKey('stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    stock_id = Column(Integer, ForeignKey(
+        'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
     volume = Column(Integer, nullable=False)
     turnover = Column(Integer, nullable=False)
-    open = Column(Numeric(precision=2), nullable=False)
-    high = Column(Numeric(precision=2), nullable=False)
-    low = Column(Numeric(precision=2), nullable=False)
-    close = Column(Numeric(precision=2), nullable=False)
+    open = Column(Numeric(scale=2), nullable=False)
+    high = Column(Numeric(scale=2), nullable=False)
+    low = Column(Numeric(scale=2), nullable=False)
+    close = Column(Numeric(scale=2), nullable=False)
     n_deals = Column(Integer, nullable=True)  # api may not have such data
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
@@ -97,13 +106,13 @@ class StockKDay(Base):
 if __name__ == '__main__':
 
     # # drop table if exist
-    # Base.metadata.drop_all(engine, tables=[
-    #                        Exchange.__table__, Stock.__table__, StockKMin.__table__, StockKHour.__table__, StockKDay.__table__], checkfirst=True)
-    Base.metadata.create_all(bind=engine, checkfirst=True )  # create table
+    Base.metadata.drop_all(engine, tables=[
+                           Exchange.__table__, Stock.__table__, StockKMin.__table__, StockKHour.__table__, StockKDay.__table__], checkfirst=True)
+    Base.metadata.create_all(bind=engine, checkfirst=True)  # create table
 
     with SessionLocal() as session:
         # insert
-        session.add(Exchange(name='台灣證券交易所', code_name='TPE') )
+        session.add(Exchange(name='台灣證券交易所', code_name='TPE'))
         session.add(Stock(exchange_id=1, symbol='2330'))
         session.commit()
 
@@ -111,6 +120,23 @@ if __name__ == '__main__':
         # row=rows[0]
         # print(row.fee ,row.loan)
         print(rows)
+
         for row in rows:
-            print(row.id,row.name,row.code_name)
+            print(row.id, row.name, row.code_name)
             # print(row.product_id, row.deal_dt, row.price, row.qty, row.trade_type, row.total_price)
+
+        session.add(StockKMin(stock_id=1,
+                        start_ts="2021-10-21T23:01:12.560Z",
+                        volume=33,
+                        turnover=999,
+                        open=800,
+                        high=804,
+                        low=799,
+                        close=800,
+                        n_deals=1,
+                        dividends=5,
+                        stock_splits=0))
+        session.commit()
+        rows = session.query(StockKMin)
+        for row in rows:
+            print(row.id, row.stock_id, row.volume, row.high)

@@ -67,9 +67,13 @@
   * 這可能原始是分bar table，有view 轉成其它的要用
   * 或分成三個table? 就不用這一項
 * turnover
-  * 成交金額，有時候是寫amount。volume\* close 約等於，但筆一筆不同所以還是會差一點
+  * 成交金額，有時候是寫amount。volume\* close 約等於，但每一筆成交價不同所以還是會差一點
 * n_deals
   * 幾筆交易
+* dividends
+  * 股息
+* stock_splits
+  * 股票分割, 除權
 
 
 
@@ -102,9 +106,11 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
 | ---- | ---- | ---- | ---- | ---- | ---- |
 |      |      |      |      |      |      |
 
+基本面
 
+* 如果要有基本面，db 要有 company 的table
 
-
+使用基本面是一個很重大的議題，因為datamodel 對於基本面是很難有有效的記錄的 
 
 
 
