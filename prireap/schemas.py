@@ -10,15 +10,16 @@ class StockKBarCreate(BaseModel):
     stock_id: int
     start_ts: datetime.datetime
     # interval: int
-    volume: int
-    turnover: int
     open: Decimal
     high: Decimal
     low: Decimal
     close: Decimal
-    n_deals: int
-    dividends: int
-    stock_splits: int
+    volume: int
+
+    turnover: Optional[int]=None
+    n_deals: Optional[int]=None
+    dividends: Optional[int]=None
+    stock_splits: Optional[int]=None
 
     class Config:
         orm_mode = True
@@ -52,6 +53,8 @@ class Stock(StockCreate):
 class ExchangeCreate(BaseModel):
     name: str
     code_name: str
+    strt_cron_utc: Optional[str]=None
+    end_cron_utc: Optional[str]=None
 
     class Config:
         orm_mode = True

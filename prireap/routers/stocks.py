@@ -5,14 +5,13 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 router = APIRouter(
-    prefix="/stocks",
     tags=["stocks"],
     # responses={404: {"description": "Not found"}},
 )
 
 
 @router.get(
-    "/",
+    "/stocks/",
     response_model=List[schemas.Stock]
 )
 def get_stocks(db: Session = Depends(get_db),
@@ -36,7 +35,7 @@ def get_stocks(db: Session = Depends(get_db),
 
 
 @router.get(
-    "/{stock_id}",
+    "/stocks/{stock_id}",
     response_model=schemas.Stock
 )
 def get_stock_by_id(stock_id: int, db: Session = Depends(get_db)):
@@ -47,7 +46,7 @@ def get_stock_by_id(stock_id: int, db: Session = Depends(get_db)):
 
 
 @router.post(
-    "/",
+    "/stocks/",
     response_model=schemas.Stock
 )
 def create_stock(stock_create: schemas.StockCreate, db: Session = Depends(get_db)):
@@ -65,7 +64,7 @@ def create_stock(stock_create: schemas.StockCreate, db: Session = Depends(get_db
     return crud.create_stock(db=db, stock=stock_create)
 
 # @router.delete(
-#     "/{code_name}",
+#     "/stocks/{code_name}",
 #     status_code=status.HTTP_204_NO_CONTENT
 # )
 # def delete_exchange(code_name:str, db:Session=Depends(get_db)):
@@ -76,8 +75,20 @@ def create_stock(stock_create: schemas.StockCreate, db: Session = Depends(get_db
 #         raise HTTPException(status_code=403, detail="exchanger still contain stocks")
 #     return crud.delete_exchange_by_code_name(db=db, code_name=code_name)
 
+@router.post(
+     "/composite/stocks/",
+     response_model=List[schemas.Stock]
+)
+def create_stocks():
+    '''
+    not implement yet, don't use
+    '''
+    raise NotImplementedError
+    return
+
+
 # @router.post(
-#     "/{stock_id}/kmins",
+#     "/stocks/{stock_id}/kmins",
 #     response_model=schemas.StockKBar
 # )
 # def create_stockKmins_for_stocks(stock_id:int, stock:schemas.StockCreate, db:Session=Depends(get_db)):

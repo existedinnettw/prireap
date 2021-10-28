@@ -6,14 +6,13 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 router = APIRouter(
-    prefix="/kmins",
     tags=["kmins"],
     # responses={404: {"description": "Not found"}},
 )
 
 
 @router.get(
-    "/",
+    "/kmins/",
     response_model=List[schemas.StockKBar]
 )
 def get_kmins(from_ts: Optional[datetime] = Query(None),
@@ -24,12 +23,14 @@ def get_kmins(from_ts: Optional[datetime] = Query(None),
     搭配query parameter 很有用
     stock_ids: array?
     '''
-    db_kmins = crud.get_stockKMins(db)
+    db_kmins = []
+    db_kmins = crud.get_stockKMins_with_filter(
+        db, start=from_ts, stock_ids=stock_ids, end=to_ts)
     return db_kmins
 
 
 @router.get(
-    "/{kmin_id}",
+    "/kmins/{kmin_id}",
     response_model=schemas.StockKBar
 )
 def get_kmin_by_id(kmin_id: int,
@@ -41,18 +42,26 @@ def get_kmin_by_id(kmin_id: int,
 
 
 @router.post(
-    "/kmins",
+    "/kmins/",
     response_model=schemas.StockKBar
 )
 def create_kmin(kmin_create: schemas.StockKBarCreate, db: Session = Depends(get_db)):
-    db_stock=crud.get_stock(db,kmin_create.stock_id)
+    db_stock = crud.get_stock(db, kmin_create.stock_id)
     if not db_stock:
         raise HTTPException(
             status_code=404, detail="stock not exist, create stock first")
 
     db_kmin = crud.get_stockKMin_by_stock_and_start(
-        db, stock_id=kmin_create.stock_id, start=kmin_create.start_ts )
+        db, stock_id=kmin_create.stock_id, start=kmin_create.start_ts)
     if db_kmin:
         raise HTTPException(status_code=400, detail="kmin already exist")
-    print(kmin_create.high, kmin_create.low,'\n\n\n')
+    print(kmin_create.high, kmin_create.low, '\n\n\n')
     return crud.create_stockKMin(db=db, stockKBar=kmin_create)
+
+
+@router.post(
+    "/composite/kmins/",
+    response_model=List[schemas.StockKBar]
+)
+def create_kmins():
+    return

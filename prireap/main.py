@@ -9,7 +9,7 @@ from . import schemas, crud, models
 from .database import SessionLocal, engine
 from typing import List, Optional
 import datetime
-from .routers import exchanges, compositeExchanges, stocks, stockKMins
+from .routers import exchanges, stocks, stockKMins, stockKHours
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -104,9 +104,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
         await manager.broadcast(f"Client #{client_id} left the chat")
 # ===================================================================================
 app.include_router(exchanges.router)
-app.include_router(compositeExchanges.router)
 app.include_router(stocks.router)
 app.include_router(stockKMins.router)
+app.include_router(stockKHours.router)
 
 
 # @app.post("/kbars_hr")

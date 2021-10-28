@@ -35,6 +35,10 @@
 
 
 
+# exchanger
+
+把 交易所的工作時間用crontab 記錄? 如果用crontab了話，要同時用兩個，一個for start time, another for end time
+
 # kbar
 
 目前分k的資料為主，或說分k 就是暫時的最後目標，當沖的回測也是用分K而已。
@@ -66,16 +70,26 @@
   * 這筆是 分、時、日?
   * 這可能原始是分bar table，有view 轉成其它的要用
   * 或分成三個table? 就不用這一項
-* turnover
-  * 成交金額，有時候是寫amount。volume\* close 約等於，但每一筆成交價不同所以還是會差一點
-* n_deals
-  * 幾筆交易
+* data
+  * **open**
+  * **high** 
+  * **low**
+  * **close**
+  * **volume**
+    * 成交量（股數）
+  * turnover
+    * 成交金額，有時候是寫amount。volume\* close 約等於，但每一筆成交價不同所以還是會差一點
+  * n_deals
+    * 幾筆交易
 * dividends
   * 股息
 * stock_splits
   * 股票分割, 除權
 
 
+
+dividends 和 kbar 是和"天“相關的，其實可以和kbar分開（特別是kmin, khour）。yfinance有action，專門列出所有 dividens & kbar & 對應日期，可見db 裡可能是分開存放。目前為了簡化，先放一起。
+有部份API是直接用 [adj close](https://www.investopedia.com/terms/a/adjusted_closing_price.asp) ，我看它的說明感覺是一個動作全部都會影響到，所以記錄當下的adj close感覺是沒意義的？
 
 # tick
 

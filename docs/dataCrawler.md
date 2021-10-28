@@ -11,74 +11,98 @@
 
 麻煩的點在於data_source 到底要採取什麼樣的格式，這就是典型的資料庫問題。而到底要拿什麼資料，拿多少資料也和使用的algorithm 有高度相關
 
+
+
 # source
 
 * 資料源
 
-  * 基本面
-
+  * twse 台灣證交所
+    * 最權威
     * [【大盤、各產業類股及上市股票本益比、殖利率及股價淨值比】月報](https://www.twse.com.tw/zh/statistics/statisticsList?type=04&subType=220)
     * [個股日本益比、殖利率及股價淨值比（依日期查詢）](https://www.twse.com.tw/zh/page/trading/exchange/BWIBBU_d.html)
-    * 用yfinance 
+    * [OAS標準之API說明文件網址](https://openapi.twse.com.tw/v1/swagger.json)
+      * 安裝swagger extension 直接render
+      * 可以看到twse 的API 也完全不是用restful API，股票的各種應用特性很難符合restful API，response 甚至是csv 而非 html body
+  * yahoo finance api
+    * [Yahoo Finance API](https://www.yahoofinanceapi.com/)
+      * 有swagger 
+      * 根據[〈Free Stock Data for Python Using Yahoo Finance API〉](https://towardsdatascience.com/free-stock-data-for-python-using-yahoo-finance-api-9dafd96cad2e#:~:text=Rate Limitation,of 48%2C000 requests a day).)的說法，Yahoo Finance的API的限制為：Using the Public API (without authentication), you are  limited to 2,000 requests per hour per IP (or up to a total of 48,000  requests a day)。
+        * 限制蠻麻煩的，台股約1116，hourly 就是最高限制了，
+        * 可以算一下，minutely, 1116\*60=60000 per hour
+        * 可能可以用換ip 破解
+          * 電腦撥號
+          * vpn
+      * yfinance一次最多quote 10檔，1000檔也要100次
+    * yfinance 
+      * 而且短期大量query data之後應該是有限速，實測用yfinance acquire khour 也還是蠻慢的，整個台股，至少5min。如果可以找到kmin的source ，還不如每個小時用kmin的資料sum up
+  * 群益API
+    * [SKQuoteLib_RequestStocks的限制](https://www.capital.com.tw/Service2/download/API_BBSpage.asp?BBSID={6BF05CD6-B3E3-4039-B554-89D56FB09827})
+      * max 200筆，即時報價
+  * 元大one api
+    * [券商API功能比較表 - GSnail](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjVqN-8wunzAhXUy4sBHY83BMsQFnoECAMQAw&url=https%3A%2F%2Fgsnail.trade%2Fweb%2Fins%2Fapi_compare&usg=AOvVaw0ZMY8qv_yKIm-9nFLJZzEX)
+      * 2000檔的訂閱應該是很夠了
+    * 但是元大的API很多也很亂，要花一點時間確定訊息對不對
 
-  * 技術分析
+  * **永豐金 api** 
 
-    * **永豐金 api** 
+    * Tick 資料與 K 棒
 
-      * Tick 資料與 K 棒
+    * > 台灣的金融業，api 基底可能都是.net 平台。 所以這個python 一樣也只能在windows，當然也可以用docker。
 
-      * > 台灣的金融業，api 基底可能都是.net 平台。 所以這個python 一樣也只能在windows，當然也可以用docker。
+    * [永豐金證券程式交易 — Python API 準備 in Windows env.](https://medium.com/@jd7222/%E6%B0%B8%E8%B1%90%E8%AD%89%E5%88%B8%E6%A9%9F%E5%99%A8%E4%BA%BA-python-api-%E6%BA%96%E5%82%99-in-windows-env-d626cabe6b6e)
 
-      * [永豐金證券程式交易 — Python API 準備 in Windows env.](https://medium.com/@jd7222/%E6%B0%B8%E8%B1%90%E8%AD%89%E5%88%B8%E6%A9%9F%E5%99%A8%E4%BA%BA-python-api-%E6%BA%96%E5%82%99-in-windows-env-d626cabe6b6e)
+    * 由於目前台灣就永豐金的python api 做的最完善，接下來也要會其會準
 
-      * 由於目前台灣就永豐金的python api 做的最完善，接下來也要會其會準
+    * 注意 api 有 [使用限制](https://sinotrade.github.io/tutor/limit/) >500times/5s 會被ban
 
-      * 注意 api 有 [使用限制](https://sinotrade.github.io/tutor/limit/) >500times/5s 會被ban
+      * 也就是1116檔，大約要10~15 s，勉強可接受
 
-      * 分kbar 保留兩年，查兩年前的資料只會得到null data
+    * 分kbar 保留兩年，查兩年前的資料只會得到null data
 
-    * **multicharts**
+  * **multicharts**
 
-      * 台灣專業操盤者的標準，就算不用也要知道
-      * 一般版月費大約1000，專業版要3000
-    
-    * yahoo finance
-    
-      * [使用Python及Yahoo Finance API抓取台股歷史資料](https://aronhack.com/retrieve-stock-historical-data-with-python-and-yahoo-finance-api/)
-    
-      * 分k只能抓到前30日的資料，1次7d max。
-    
-      * 5~30min k, 60d max, 
-    
-      * 60min~, 2y max,
-    
-      * 1d,,
-    
-      * 我過去資料，可能60min 或 1d的資料來比較好，可以從現在開始儲存分k
-    
-        * > 回憶過去大跌就會了解，分k 絕對是必要的
-    
-      * yahoo 的資料的volume 是成交股數而不是成交金額。用成交金額比較有通用性
-    
-        * 自己乘close 就好
-    
-    * googlefinance
-    
-      * 參考datasource
-    
-    * [grs ](https://github.com/toomore/grs) 
-    
-      * > grs 台灣上市上櫃股票價格擷取
-    
-    * [twstock](https://github.com/mlouielu/twstock)
-    
-    * [tsrtc](https://github.com/Asoul/tsrtc)
-    
-    * [tsec](https://github.com/Asoul/tsec)
-    
-    * [FinMind](https://github.com/FinMind/FinMind)
-    
-      * 現成的台股API，但好像要錢
+    * 台灣專業操盤者的標準，就算不用也要知道
+    * 一般版月費大約1000，專業版要3000
+
+  * yahoo finance
+
+    * [使用Python及Yahoo Finance API抓取台股歷史資料](https://aronhack.com/retrieve-stock-historical-data-with-python-and-yahoo-finance-api/)
+
+    * 分k只能抓到前30日的資料，1次7d max。
+
+    * 5~30min k, 60d max, 
+
+    * 60min~, 2y max,
+
+    * 1d,,
+
+    * 我過去資料，可能60min 或 1d的資料來比較好，可以從現在開始儲存分k
+
+      * > 回憶過去大跌就會了解，分k 絕對是必要的
+
+    * yahoo 的資料的volume 是成交股數而不是成交金額。用成交金額比較有通用性
+
+      * 自己乘close 就好
+
+  * googlefinance
+
+    * 參考datasource
+
+  * [grs ](https://github.com/toomore/grs) 
+
+    * > grs 台灣上市上櫃股票價格擷取
+
+  * [twstock](https://github.com/mlouielu/twstock)
+
+  * [tsrtc](https://github.com/Asoul/tsrtc)
+
+  * [tsec](https://github.com/Asoul/tsec)
+
+  * **[FinMind](https://github.com/FinMind/FinMind)**
+
+    * 現成的台股API，free user 有一點限制
+    * 項目很多，可以搭配使用
 
 ## 開市資料
 
@@ -121,16 +145,23 @@
 
 方案有
 
-1. one file + python lib(module)
+1. one file (stored data) + python lib(module)
 2. db server + python lib(module)
 3. db server+ backend server + python lib
+   1. 後來發現，backend server 不只有 restful api，還有RPC
+      1. [如何理解RPC和REST](https://zhuanlan.zhihu.com/p/34440779)
+      2. RPC是雖然有server，但架構上看不到的，所以在程式設計架構上是等效option2，而不用考慮backend server的設計。
+         1. 而且在LAN，不用考慮太多error state的問題，開銷也少
+         2. grpc (proto)
+         3. [Benchmarking — REST vs. gRPC](https://medium.com/sahibinden-technology/benchmarking-rest-vs-grpc-5d4b34360911)
+            1. 其實rest性能也不差，兩者主要都是被網路限制。直接把rest當 method 應該也可以（for loop calling）
 
 在最solid的回測下，一般是20年，10.55GB\*10~105.5GB，從節省的硬碟的角度來看不值，如果從1.32s -->13.2s 好像也還好，主要的關鍵可能反而是此時的memory 應該load 不下了（當然也可以8\*16G=128G server MB插滿）。所以必須採用streaming，one file 方案就不是很好了（當然也有像tensorflow 那樣的tfrecord，但是那個難度可能比db server 還高，要得到overview data 一樣是要額外的batching code，當然有不用create db的好處），當然 streaming 是最終需要但達到那個最終還很長。
 data at 外網我覺得不用想太多，因為那怕是花大錢提升外網速度，100G+的流量也肯定會被盯上的。
 方案2,3 的差異其實對於自己使用（非對外開放收費）沒什麼差別，節省的硬碟的錢並不重要，好幾個application 在方案2一樣可以共用db server，都用同一套python lib。如果內網有專用的db server，內網的所有本機一樣可以access(假設沒有人會亂搞)，一樣能省硬碟。
 綜合以上，我認為方案2在內網或本機是最適合的。這個東西的目的不是要copy 出別人的api功能，再拿去提供給別人賣錢。而是在純依靠別人api 不可行之下，為了確保data source +程式的良好架構 而必須要做的功能。專業的model base 量化交易人不管花了多大的錢都應該有這個部份。
 
-* > 至於real time 的 query 我覺得還是純用永api，因為資料量不大。
+* > 至於real time 的 query 我覺得還是純用 券商api，因為資料量不大。
 
   * 更正，可能還是要用自己的，原因在於永api kbar query 限制，kbar 的query 一次只能query 一檔股票，且500/5s，台股有1k檔，所以要10s。這個情況可能還不如用yfinance。
   * 而且kbar 無法直接query mulit stock +時K+streaming 功能。只能說我認為直接用純api query 可行是正確的，但是手上的永API還不達標。
@@ -202,7 +233,7 @@ Python 的ipc
 
 * [py39 Networking and Interprocess Communication](https://docs.python.org/3.9/library/ipc.html)
   * asyncio 取代asyncore, asyn
-    * asyncio 化簡用 socket 來做IPC  e.g. [**Streams**](https://docs.python.org/3.9/library/asyncio-stream.html#asyncio-streams)
+    * asyncio 的feature是，化簡用 socket 來做IPC  e.g. [**Streams**](https://docs.python.org/3.9/library/asyncio-stream.html#asyncio-streams)
       * [How can I broadcast asyncio StreamReader to several consumers?](https://stackoverflow.com/questions/61744721/how-can-i-broadcast-asyncio-streamreader-to-several-consumers)
       * aiohttp 是一個lib，一樣也有websocket
   * selectors 的底層是 select，用selector 就好

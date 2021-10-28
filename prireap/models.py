@@ -9,6 +9,10 @@ from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship, backref, validates, sessionmaker
 from .database import Base, SessionLocal, engine
 
+'''
+TODO:
+    may need alembic for migration
+'''
 
 load_dotenv()
 # print(os.getenv('DBHOST'))
@@ -17,11 +21,17 @@ load_dotenv()
 class Exchange(Base):
     '''
     code_name: e.g. TPE
+    * crontab:
+        although crontab is accept to be null, it is highly recommend to be filled to simplify program use.
+        the datetime is base on UTC (without timezone).
+        can add validates
     '''
     __tablename__ = 'exchange'
     id = Column(Integer, Sequence('exg_id_seq'), primary_key=True)
     name = Column(String, nullable=False, unique=True)
     code_name = Column(String, nullable=False, unique=True)
+    strt_cron_utc = Column(String, nullable=True)
+    end_cron_utc = Column(String, nullable=True)
 
     stocks = relationship("Stock", back_populates="exchange")
 
@@ -53,12 +63,12 @@ class StockKMin(Base):
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
-    volume = Column(Integer, nullable=False)
-    turnover = Column(Integer, nullable=False)
     open = Column(Numeric(scale=2), nullable=False)
     high = Column(Numeric(scale=2), nullable=False)
     low = Column(Numeric(scale=2), nullable=False)
     close = Column(Numeric(scale=2), nullable=False)
+    volume = Column(Integer, nullable=False)
+    turnover = Column(Integer, nullable=True)
     n_deals = Column(Integer, nullable=True)  # api may not have such data
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
@@ -72,12 +82,12 @@ class StockKHour(Base):
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
-    volume = Column(Integer, nullable=False)
-    turnover = Column(Integer, nullable=False)
     open = Column(Numeric(scale=2), nullable=False)
     high = Column(Numeric(scale=2), nullable=False)
     low = Column(Numeric(scale=2), nullable=False)
     close = Column(Numeric(scale=2), nullable=False)
+    volume = Column(Integer, nullable=False)
+    turnover = Column(Integer, nullable=True)
     n_deals = Column(Integer, nullable=True)  # api may not have such data
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
@@ -91,12 +101,12 @@ class StockKDay(Base):
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
-    volume = Column(Integer, nullable=False)
-    turnover = Column(Integer, nullable=False)
     open = Column(Numeric(scale=2), nullable=False)
     high = Column(Numeric(scale=2), nullable=False)
     low = Column(Numeric(scale=2), nullable=False)
     close = Column(Numeric(scale=2), nullable=False)
+    volume = Column(Integer, nullable=False)
+    turnover = Column(Integer, nullable=True)
     n_deals = Column(Integer, nullable=True)  # api may not have such data
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
@@ -106,14 +116,15 @@ class StockKDay(Base):
 if __name__ == '__main__':
 
     # # drop table if exist
-    Base.metadata.drop_all(engine, tables=[
-                           Exchange.__table__, Stock.__table__, StockKMin.__table__, StockKHour.__table__, StockKDay.__table__], checkfirst=True)
+    # Base.metadata.drop_all(engine, tables=[
+    #                        Exchange.__table__, Stock.__table__, StockKMin.__table__, StockKHour.__table__, StockKDay.__table__], checkfirst=True)
     Base.metadata.create_all(bind=engine, checkfirst=True)  # create table
+
 
     with SessionLocal() as session:
         # insert
         session.add(Exchange(name='台灣證券交易所', code_name='TPE'))
-        session.add(Stock(exchange_id=1, symbol='2330'))
+        session.add(Stock(exchange_id=1, symbol='2330', name='台積電'))
         session.commit()
 
         rows = session.query(Exchange)
@@ -125,18 +136,19 @@ if __name__ == '__main__':
             print(row.id, row.name, row.code_name)
             # print(row.product_id, row.deal_dt, row.price, row.qty, row.trade_type, row.total_price)
 
-        session.add(StockKMin(stock_id=1,
-                        start_ts="2021-10-21T23:01:12.560Z",
-                        volume=33,
-                        turnover=999,
-                        open=800,
-                        high=804,
-                        low=799,
-                        close=800,
-                        n_deals=1,
-                        dividends=5,
-                        stock_splits=0))
-        session.commit()
-        rows = session.query(StockKMin)
-        for row in rows:
-            print(row.id, row.stock_id, row.volume, row.high)
+        # #kbar test
+        # session.add(StockKMin(stock_id=1,
+        #                 start_ts="2021-10-21T23:01:12.560Z",
+        #                 volume=33,
+        #                 turnover=999,
+        #                 open=800,
+        #                 high=804,
+        #                 low=799,
+        #                 close=800,
+        #                 n_deals=1,
+        #                 dividends=5,
+        #                 stock_splits=0))
+        # session.commit()
+        # rows = session.query(StockKMin)
+        # for row in rows:
+        #     print(row.id, row.stock_id, row.volume, row.high)
