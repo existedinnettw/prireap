@@ -24,16 +24,34 @@
     * [OAS標準之API說明文件網址](https://openapi.twse.com.tw/v1/swagger.json)
       * 安裝swagger extension 直接render
       * 可以看到twse 的API 也完全不是用restful API，股票的各種應用特性很難符合restful API，response 甚至是csv 而非 html body
+      * 有些API沒顯示
+    * `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20211001&stockNo=2330`
+      * 
   * yahoo finance api
     * [Yahoo Finance API](https://www.yahoofinanceapi.com/)
       * 有swagger 
+        * `https://query1.finance.yahoo.com/v8/finance/chart/2330.TW?interval=1d`
+        * `https://query1.finance.yahoo.com/v8/finance/chart/2330.TW?region=US&lang=en-US&includePrePost=false&interval=2m&useYfid=true&range=1d&corsDomain=finance.yahoo.com&.tsrc=finance`
       * 根據[〈Free Stock Data for Python Using Yahoo Finance API〉](https://towardsdatascience.com/free-stock-data-for-python-using-yahoo-finance-api-9dafd96cad2e#:~:text=Rate Limitation,of 48%2C000 requests a day).)的說法，Yahoo Finance的API的限制為：Using the Public API (without authentication), you are  limited to 2,000 requests per hour per IP (or up to a total of 48,000  requests a day)。
         * 限制蠻麻煩的，台股約1116，hourly 就是最高限制了，
         * 可以算一下，minutely, 1116\*60=60000 per hour
+          * 我自己的測試結果，如果在traday裡，短時間request 400次以上，甚至會直接被封掉，並沒有回傳data（被封不會回傳相關資料）。連被封都沒顯示就很麻煩了，
         * 可能可以用換ip 破解
           * 電腦撥號
           * vpn
       * yfinance一次最多quote 10檔，1000檔也要100次
+        * [使用Python及Yahoo Finance API抓取台股歷史資料](https://aronhack.com/retrieve-stock-historical-data-with-python-and-yahoo-finance-api/)
+        * 分k只能抓到前30日的資料，1次7d max。
+
+        * 5~30min k, 60d max, 
+
+        * 60min~, 2y max,
+
+        * 1d,,
+
+      * yahoo 的資料的volume 是成交股數而不是成交金額。用成交金額比較有通用性
+
+        * 自己乘close 就好
     * yfinance 
       * 而且短期大量query data之後應該是有限速，實測用yfinance acquire khour 也還是蠻慢的，整個台股，至少5min。如果可以找到kmin的source ，還不如每個小時用kmin的資料sum up
   * 群益API
@@ -64,26 +82,6 @@
 
     * 台灣專業操盤者的標準，就算不用也要知道
     * 一般版月費大約1000，專業版要3000
-
-  * yahoo finance
-
-    * [使用Python及Yahoo Finance API抓取台股歷史資料](https://aronhack.com/retrieve-stock-historical-data-with-python-and-yahoo-finance-api/)
-
-    * 分k只能抓到前30日的資料，1次7d max。
-
-    * 5~30min k, 60d max, 
-
-    * 60min~, 2y max,
-
-    * 1d,,
-
-    * 我過去資料，可能60min 或 1d的資料來比較好，可以從現在開始儲存分k
-
-      * > 回憶過去大跌就會了解，分k 絕對是必要的
-
-    * yahoo 的資料的volume 是成交股數而不是成交金額。用成交金額比較有通用性
-
-      * 自己乘close 就好
 
   * googlefinance
 
@@ -432,3 +430,16 @@ get resources/ 基本上是一定會需要filter的
 
 
 
+# 計時
+
+* python-crontab
+  * 和某cron file 整合，不建議
+* [cron-converter](https://github.com/Sonic0/cron-converter)
+  * croniter 
+* [apscheduler](https://github.com/agronholm/apscheduler)
+  * Cron-style scheduling (with optional start/end times)
+
+最常用的還是apscheduler
+
+* [How do I share a single job store among one or more worker processes?¶](https://apscheduler.readthedocs.io/en/stable/faq.html)
+* 

@@ -39,6 +39,8 @@
 
 把 交易所的工作時間用crontab 記錄? 如果用crontab了話，要同時用兩個，一個for start time, another for end time
 
+另一個辦法，hour資料直接表示區間，minute 的 \* ，表示所有時間而非單一min，但這無法處理台股開到 30分，所以不是很理想。
+
 # kbar
 
 目前分k的資料為主，或說分k 就是暫時的最後目標，當沖的回測也是用分K而已。
@@ -70,6 +72,8 @@
   * 這筆是 分、時、日?
   * 這可能原始是分bar table，有view 轉成其它的要用
   * 或分成三個table? 就不用這一項
+  * yahoo finance # valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
+    * 有這麼多項不太可能都是分別的
 * data
   * **open**
   * **high** 

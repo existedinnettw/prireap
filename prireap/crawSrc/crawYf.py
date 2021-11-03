@@ -16,17 +16,24 @@ class YfCraw(CrawBase):
         super().__init__()
     
     def create_kmin_of_cur(self):
-        print("yahoo finance cann't give you useable kmin, so it isn't supported")
-        raise NotImplementedError
+        super().create_kmin_of_cur()
+        print("yahoo finance cann't give you useable kmin, so it isn't supported, return immediately...")
+        # raise NotImplementedError
+        return
     def create_khour_of_cur(self):
         '''
         the function is expect to called at the callback of each hour to request last hour kbar
         TODO: check marketing time?
         '''
+        super().create_khour_of_cur()
         exg_id = self.tpe_exg['id']
         server_stock_list = self.list_exg_stocks(exg_id)
         cdt = datetime.now()
-        while cdt.minute >= 59:
+        
+        while cdt.minute >= 58:
+            '''
+            避免基本的時間差，似乎不是很需要，因為是用timer call的，所以local時間不會有error
+            '''
             time.sleep(1e-2)  # sleep to make sure can query hourly data
             cdt = datetime.now()
         cdt_hr = self._hour_rounder(cdt)
@@ -76,3 +83,4 @@ class YfCraw(CrawBase):
                 print(response.text)
             except Exception as e:
                 print(e)
+    

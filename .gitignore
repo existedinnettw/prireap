@@ -130,3 +130,5 @@ dmypy.json
 
 # my own pass
 expm/
+test*.py
+*.pfx
