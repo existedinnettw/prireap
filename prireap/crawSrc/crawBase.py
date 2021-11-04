@@ -1,4 +1,9 @@
-import requests
+
+# import asyncio
+# import aiohttp
+# from requests import async
+import grequests
+import requests  # Yes. Import requests after grequests
 import os
 from dotenv import load_dotenv
 from urllib.parse import urljoin
@@ -18,6 +23,7 @@ import warnings
 import yfinance as yf
 from threading import Event  # use event to control 先後
 from enum import Enum, auto
+import pandas as pd
 
 
 load_dotenv()
@@ -29,15 +35,15 @@ class CrawBase(metaclass=abc.ABCMeta):
     '''
 
     def __init__(self):
-        self.REQUEST_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'
+        self.TWSE_OPENAPI_URL = 'https://openapi.twse.com.tw/v1/'
         self.tpe_exg = self.get_tpe_exg()
         self.sched = BackgroundScheduler()
         # may split scheduler
         self.sched.add_listener(
             self._listner, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
         self.sched.start()
-        self.khour_event=Event()
-        self.kday_event=Event()
+        self.khour_event = Event()
+        self.kday_event = Event()
 
         self.trade_day_start_dt = None
         self.trade_day_end_dt = None
@@ -49,24 +55,33 @@ class CrawBase(metaclass=abc.ABCMeta):
         TODO:
         can use schmas.py exchange
         '''
-        exg = requests.get(urljoin(os.getenv('SERVER_URL'), 'exchanges'), params={
-            'code_names': 'TPE'}).json()[0]
-        return exg
+        try:
+            exg = requests.get(urljoin(os.getenv('SERVER_URL'), 'exchanges'), params={
+                'code_names': 'TPE'}).json()[0]
+            return exg
+        except requests.exceptions.HTTPError as error:
+            print(error)
+        # except requests.exceptions.
+        except requests.exceptions.ConnectionError as e:  # ConnectionRefusedError
+            print('\nError: Please make sure if the local server has been opened\n')
+        except Exception as e:
+            print(e)
 
     def __get_khours(self):
         '''
         for test only
         '''
         response = requests.get(
-            urljoin(os.getenv('SERVER_URL'), 'khours'))
+            urljoin(os.getenv('SERVER_URL'), 'kbars'), params={'interval': 'hour'})
         print(response.text)
         return response.text
 
     def add_tpe_stocks(self):
-        r = requests.get(self.REQUEST_URL)
+        r = requests.get(urljoin(self.TWSE_OPENAPI_URL,
+                         'exchangeReport/STOCK_DAY_ALL'))
         official_stock_li = r.json()
 
-        exg_id = self.get_tpe_exg_id()
+        exg_id = self.tpe_exg['id']
         server_stock_list = self.list_exg_stocks(exg_id)
         # print(server_stock_list)
         server_stock_symbols = [i['symbol'] for i in server_stock_list]
@@ -96,10 +111,12 @@ class CrawBase(metaclass=abc.ABCMeta):
                 print('the stock {} already exist, skip it'.format(
                     row['Code']))
 
-    def list_exg_stocks(self, exg_id):
+    def list_exg_stocks(self, exg_id: int = None):
         '''
         list all stocks of specfic exg at local server
         '''
+        if exg_id == None:
+            exg_id = self.tpe_exg['id']
         server_stock_list = requests.get(
             urljoin(os.getenv('SERVER_URL'), 'stocks'), params={'exchanges': exg_id}).json()
         return server_stock_list
@@ -129,7 +146,8 @@ class CrawBase(metaclass=abc.ABCMeta):
         * 1:00~1:30 acquire data 會有資料，可是
         '''
         if not self.khour_event.wait(timeout=3):
-            warnings.warn('Some problem occur, no kmin event signal come...', RuntimeWarning)
+            warnings.warn(
+                'Some problem occur, no kmin event signal come...', RuntimeWarning)
         print('/********************************/\ncreate_khour_of_cur routine at {}....'.format(datetime.now()))
 
     def create_khour_of_cur_from_local(self):
@@ -139,7 +157,73 @@ class CrawBase(metaclass=abc.ABCMeta):
         '''
         raise NotImplementedError
 
+    def create_kday_of_cur(self):
+        '''
+        * Expect to be called "after" few milisecond of exchange close.
+        * 要處理sync timeing 問題
+        TODO:
+        * TWSE 資料更新時間不確定，且資料內沒有標時間
+        * grequests 會導致local server的 sqlalchemy怪怪的。
+        '''
+
+        url = urljoin(self.TWSE_OPENAPI_URL, 'exchangeReport/STOCK_DAY_ALL')
+        r = requests.get(url)
+        df_stock_kday = pd.DataFrame.from_dict(r.json())
+
+        df_local_stocks = pd.DataFrame.from_dict(self.list_exg_stocks())
+        # print(df_local_stocks)
+        df_join = pd.merge(left=df_stock_kday, right=df_local_stocks,
+                           how='left', left_on='Code', right_on='symbol')
+        # print(df_join.replace(r'^\s*$', None, regex=True))
+        print(df_join)
+        # raise
+
+        rs = [] #Wed, 03 Nov 2021 21:00:42 GMT
+        r_date = datetime.strptime(r.headers['last-modified'],"%a, %d %b %Y %H:%M:%S %Z")
+        r_date = r_date.replace(hour=1, minute=0, second=0) #TPE time better method
+        # print(r_date)
+        # raise
+        '''
+        for row in df_join.iterrows():
+            # add to local server
+            row=row[1] #the second one is series
+            body = {'stock_id': row['id'], 'start_ts': r_date.isoformat(), 'open': row['OpeningPrice'],
+                    'high': row['HighestPrice'], 'low': row['LowestPrice'], 'close': row['ClosingPrice'],
+                    'volume': row['TradeVolume'], 'transaction': row['Transaction'], 'interval': 'day', }
+            rs.append( grequests.post(urljoin(os.getenv('SERVER_URL'), 'kbars'), json=body) )
+        # print(rs)
+        # raise
+        def exception_handler(request, exception):
+            print(exception)
+        resp=grequests.map(rs, exception_handler=exception_handler)
+        print(resp)
+        print(resp[0].text)
+        '''
+        for row in df_join.iterrows():
+            row=row[1]
+            # print(row['symbol'])
+            body = {'stock_id': row['id'], 'start_ts': r_date.isoformat(), 'open': row['OpeningPrice'],
+                                'high': row['HighestPrice'], 'low': row['LowestPrice'], 'close': row['ClosingPrice'],
+                                'volume': row['TradeVolume'], 'transaction': row['Transaction'], 'interval': 'day', }
+            body={k:v for k,v in body.items() if v}
+            try:
+                response = requests.post(
+                    urljoin(os.getenv('SERVER_URL'), 'kbars'), json=body)
+                response.raise_for_status()
+                print('sucess to add new {} (stock_id:{}) khour to local server.'.format(
+                    row['symbol'], row['id']))
+            except requests.exceptions.HTTPError as e:  # e.g. 400, 401, 404...
+                print(e)
+                print('symbol:{}, response text:{}'.format(row['symbol'], response.text))
+                # print(body)
+                # print(type(body['high']))
+            except Exception as e:
+                print(e)
+            # if row['symbol']=='00684R':
+            #     break
+
     # @abc.abstractmethod
+
     def check_open(self):
         '''
         This method is design to check if the exchage is open,

@@ -9,7 +9,7 @@ from . import schemas, crud, models
 from .database import SessionLocal, engine
 from typing import List, Optional
 import datetime
-from .routers import exchanges, stocks, stockKMins, stockKHours
+from .routers import exchanges, stocks, stockKBars
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -105,8 +105,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
 # ===================================================================================
 app.include_router(exchanges.router)
 app.include_router(stocks.router)
-app.include_router(stockKMins.router)
-app.include_router(stockKHours.router)
+app.include_router(stockKBars.router)
 
 
 # @app.post("/kbars_hr")

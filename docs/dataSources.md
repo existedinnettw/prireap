@@ -73,18 +73,21 @@
   * 這可能原始是分bar table，有view 轉成其它的要用
   * 或分成三個table? 就不用這一項
   * yahoo finance # valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
+    * 這些是api ，所以models 不一定要有一樣的pattern，不過可以看到它是用 query parameter而非分開resource
     * 有這麼多項不太可能都是分別的
+    * 
 * data
   * **open**
+    * 小到沒有交易就會null
   * **high** 
   * **low**
   * **close**
   * **volume**
     * 成交量（股數）
-  * turnover
+  * trading money, trade value
     * 成交金額，有時候是寫amount。volume\* close 約等於，但每一筆成交價不同所以還是會差一點
-  * n_deals
-    * 幾筆交易
+  * n_deals, transaction,  Trading_turnover
+    * 成交筆數, 幾筆交易
 * dividends
   * 股息
 * stock_splits

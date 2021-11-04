@@ -27,7 +27,7 @@ if __name__ == '__main__':
     # crawler.create_khour_of_cur()
     
     # crawler.khour_event.set()
-    crawler.create_khour_of_cur()
+    crawler.create_kday_of_cur()
 
 
     # crawler.run()

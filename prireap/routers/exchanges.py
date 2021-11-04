@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from .. import schemas, crud, models
 from ..dependencies import get_db
 from typing import List, Optional
@@ -42,7 +42,7 @@ def get_exchange_by_id(exchange_id: int, db: Session = Depends(get_db)):
     response_model=schemas.Exchange
 )
 def create_exchange(exg_create: schemas.ExchangeCreate, db: Session = Depends(get_db)):
-    db_exg = crud.get_exchange_by_code_name(db, exg_create.code_name)
+    db_exg = crud.get_exchange_by_code_name(db, code_names=[exg_create.code_name])
     if db_exg:
         raise HTTPException(status_code=400, detail="exchanger already exist")
     return crud.create_exchange(db=db, exchange=exg_create)
@@ -64,15 +64,16 @@ def modify_exchange(exchange_id:int, exg_create:schemas.ExchangeCreate, db:Sessi
 )
 def delete_exchange(exchange_id: int, db: Session = Depends(get_db)):
     '''
-    應該用exchange id 而非code_name
+    用exchange id, delete 該 exchange
     '''
     db_exg = crud.get_exchange(db, exchange_id)
     if not db_exg:
         raise HTTPException(status_code=400, detail="exchanger not yet exist")
-    if db_exg.stocks[0]:
+    if db_exg.stocks:
         raise HTTPException(
             status_code=403, detail="exchanger still contain stocks")
-    return crud.delete_exchange(db=db, exchange_id=exchange_id)
+    crud.delete_exchange(db=db, exchange_id=exchange_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT) 
 
 
 @router.post(

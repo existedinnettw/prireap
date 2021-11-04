@@ -25,8 +25,12 @@
       * 安裝swagger extension 直接render
       * 可以看到twse 的API 也完全不是用restful API，股票的各種應用特性很難符合restful API，response 甚至是csv 而非 html body
       * 有些API沒顯示
+      * /exchangeReport/STOCK_DAY_ALL
+        * 如果 header` last-modified: Wed, 03 Nov 2021 21:00:42 GMT ` 沒有包括今天的時間段，表示資料還沒update，這側面反應出這個API，設計的不太行。
+        * 可能用findmind 一次拿特定日期，所有資料 代替
     * `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20211001&stockNo=2330`
-      * 
+    * 證交所, 櫃買中心, 公開資訊觀測站, 期交所。
+    * `https://www.twse.com.tw/en/exchangeReport/STOCK_FIRST?response=html&date=20210716`
   * yahoo finance api
     * [Yahoo Finance API](https://www.yahoofinanceapi.com/)
       * 有swagger 
@@ -100,7 +104,12 @@
   * **[FinMind](https://github.com/FinMind/FinMind)**
 
     * 現成的台股API，free user 有一點限制
-    * 項目很多，可以搭配使用
+    * 項目很多，可以搭配使用，資料從 20年前以上到現在都有，從證交所來的
+    * 有簡單的回測框架
+    * name
+      * trading volume: 成交量（股）
+      * trading money: 成交金額
+      * trading turnover: 成交筆數
 
 ## 開市資料
 

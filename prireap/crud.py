@@ -151,7 +151,7 @@ def get_stockKMin_by_stock_and_start(db: Session, stock_id: int, start: datetime
     return db.query(models.StockKMin).filter(models.StockKMin.stock_id == stock_id, models.StockKMin.start_ts == start).first()
 
 
-def create_stockKMin(db: Session, stockKBar: schemas.StockKBarCreate):
+def create_stockKMin(db: Session, stockKBar: schemas.StockKBarBase):
     db_stockKBar = models.StockKMin(**stockKBar.dict())
     db.add(db_stockKBar)
     db.commit()
@@ -164,7 +164,7 @@ def create_stockKMin(db: Session, stockKBar: schemas.StockKBarCreate):
     # return db_stock
 
 
-def create_stockKMins(db: Session, stockKBar: List[schemas.StockKBarCreate]):
+def create_stockKMins(db: Session, stockKBar: List[schemas.StockKBarBase]):
     '''
     not yet used
     '''
@@ -202,7 +202,7 @@ def get_stockKHour_by_stock_and_start(db: Session, stock_id: int, start: datetim
     return db.query(models.StockKHour).filter(models.StockKHour.stock_id == stock_id, models.StockKHour.start_ts == start).first()
 
 
-def create_stockKHour(db: Session, stockKBar: schemas.StockKBarCreate):
+def create_stockKHour(db: Session, stockKBar: schemas.StockKBarBase):
     db_stockKBar = models.StockKHour(**stockKBar.dict())
     db.add(db_stockKBar)
     db.commit()
@@ -210,11 +210,64 @@ def create_stockKHour(db: Session, stockKBar: schemas.StockKBarCreate):
     return db_stockKBar
 
 
-def create_stockKHours(db: Session, stockKBar: List[schemas.StockKBarCreate]):
+def create_stockKHours(db: Session, stockKBar: List[schemas.StockKBarBase]):
     '''
     not yet used
     '''
     db_stockKBars = models.StockKHour(**stockKBar.dict())
+    db.add_all(db_stockKBars)
+    db.commit()
+    db.refresh(db_stockKBars)
+    return db_stockKBars
+
+# ==========================stockKDays===================================
+
+
+def get_stockKDays_with_filter(db: Session, stock_ids: Optional[List[int]] = None, start: datetime = None, end: datetime = None):
+    '''
+    '''
+    st_of_end=None
+    if end != None:
+        st_of_end = end-timedelta(hours=1)+timedelta(microseconds=1)
+    print(stock_ids, start, end)
+    return db.query(models.StockKDay).filter(
+        crit_in_with_check_none(models.StockKDay.start_ts.__ge__, start),
+        crit_in_with_check_none(models.StockKDay.start_ts.__lt__, st_of_end),
+        crit_in_with_check_none(models.StockKDay.stock_id.in_, stock_ids)
+    ).all()
+
+
+def get_stockKDay(db: Session, kday_id: int):
+    return db.query(models.StockKDay).filter(models.StockKDay.id == kday_id).first()
+
+
+def get_stockKDay_by_stock_and_start(db: Session, stock_id: int, start: datetime):
+    '''
+    use id+start time to search rather than id
+    '''
+    return db.query(models.StockKDay).filter(models.StockKDay.stock_id == stock_id, models.StockKDay.start_ts == start).first()
+
+
+def create_stockKDay(db: Session, stockKBar: schemas.StockKBarBase):
+    
+    db_stockKBar = models.StockKDay(**stockKBar.dict())
+    db.add(db_stockKBar)
+    db.commit()
+    db.refresh(db_stockKBar)
+    return db_stockKBar
+
+def delete_kday(db: Session, kday_id: int):
+    db_kday = db.query(models.StockKDay).filter(
+        models.StockKDay.id == kday_id).first()
+    db.delete(db_kday)
+    db.commit()
+    return
+
+def create_stockKDays(db: Session, stockKBar: List[schemas.StockKBarBase]):
+    '''
+    not yet used
+    '''
+    db_stockKBars = models.StockKDay(**stockKBar.dict())
     db.add_all(db_stockKBars)
     db.commit()
     db.refresh(db_stockKBars)

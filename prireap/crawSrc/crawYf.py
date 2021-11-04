@@ -66,6 +66,7 @@ class YfCraw(CrawBase):
             # 3.to request body
             df.rename(columns={'index': 'start_ts', 'Open': 'open', 'High': 'high', 'Low': 'low',
                     'Close': 'close', 'Volume': 'volume', 'Dividends': 'dividends', 'Stock Splits': 'stock_splits'}, inplace=True)
+            df['interval']='hour'
             body = json.loads(df.to_json(orient="records"))[0]
             # print(df, '\n')
             # print(body)
@@ -74,7 +75,7 @@ class YfCraw(CrawBase):
             # 4.put request to create
             try:
                 response = requests.post(
-                    urljoin(os.getenv('SERVER_URL'), 'khours'), json=body)
+                    urljoin(os.getenv('SERVER_URL'), 'kbars'), json=body)
                 response.raise_for_status()
                 print('sucess to add new {} (stock_id:{}) khour to local server.'.format(
                     yf_stock_symbol, row['id']))

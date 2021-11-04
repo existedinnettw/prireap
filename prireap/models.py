@@ -63,13 +63,12 @@ class StockKMin(Base):
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
-    open = Column(Numeric(scale=2), nullable=False)
-    high = Column(Numeric(scale=2), nullable=False)
-    low = Column(Numeric(scale=2), nullable=False)
-    close = Column(Numeric(scale=2), nullable=False)
-    volume = Column(Integer, nullable=False)
-    turnover = Column(Integer, nullable=True)
-    n_deals = Column(Integer, nullable=True)  # api may not have such data
+    open = Column(Numeric(scale=2), nullable=True)
+    high = Column(Numeric(scale=2), nullable=True)
+    low = Column(Numeric(scale=2), nullable=True)
+    close = Column(Numeric(scale=2), nullable=True)
+    volume = Column(Integer, nullable=True)
+    transaction = Column(Integer, nullable=True) #transaction
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
     UniqueConstraint('stock_id', 'start_ts', name='uq_stk_ts')
@@ -82,13 +81,12 @@ class StockKHour(Base):
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
-    open = Column(Numeric(scale=2), nullable=False)
-    high = Column(Numeric(scale=2), nullable=False)
-    low = Column(Numeric(scale=2), nullable=False)
-    close = Column(Numeric(scale=2), nullable=False)
-    volume = Column(Integer, nullable=False)
-    turnover = Column(Integer, nullable=True)
-    n_deals = Column(Integer, nullable=True)  # api may not have such data
+    open = Column(Numeric(scale=2), nullable=True)
+    high = Column(Numeric(scale=2), nullable=True)
+    low = Column(Numeric(scale=2), nullable=True)
+    close = Column(Numeric(scale=2), nullable=True)
+    volume = Column(Integer, nullable=True)
+    transaction = Column(Integer, nullable=True)
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
     UniqueConstraint('stock_id', 'start_ts', name='uq_stk_ts')
@@ -101,13 +99,12 @@ class StockKDay(Base):
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     start_ts = Column(DateTime, nullable=False)
     # interval = Column(Integer, nullable=False )
-    open = Column(Numeric(scale=2), nullable=False)
-    high = Column(Numeric(scale=2), nullable=False)
-    low = Column(Numeric(scale=2), nullable=False)
-    close = Column(Numeric(scale=2), nullable=False)
-    volume = Column(Integer, nullable=False)
-    turnover = Column(Integer, nullable=True)
-    n_deals = Column(Integer, nullable=True)  # api may not have such data
+    open = Column(Numeric(scale=2), nullable=True)
+    high = Column(Numeric(scale=2), nullable=True)
+    low = Column(Numeric(scale=2), nullable=True)
+    close = Column(Numeric(scale=2), nullable=True)
+    volume = Column(Integer, nullable=True)
+    transaction = Column(Integer, nullable=True)
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
     UniqueConstraint('stock_id', 'start_ts', name='uq_stk_ts')
@@ -140,12 +137,10 @@ if __name__ == '__main__':
         # session.add(StockKMin(stock_id=1,
         #                 start_ts="2021-10-21T23:01:12.560Z",
         #                 volume=33,
-        #                 turnover=999,
         #                 open=800,
         #                 high=804,
         #                 low=799,
         #                 close=800,
-        #                 n_deals=1,
         #                 dividends=5,
         #                 stock_splits=0))
         # session.commit()
