@@ -11,15 +11,17 @@ import yfinance as yf
 
 load_dotenv()
 
+
 class YfCraw(CrawBase):
     def __init__(self):
         super().__init__()
-    
+
     def create_kmin_of_cur(self):
         super().create_kmin_of_cur()
         print("yahoo finance cann't give you useable kmin, so it isn't supported, return immediately...")
         # raise NotImplementedError
         return
+
     def create_khour_of_cur(self):
         '''
         the function is expect to called at the callback of each hour to request last hour kbar
@@ -29,7 +31,7 @@ class YfCraw(CrawBase):
         exg_id = self.tpe_exg['id']
         server_stock_list = self.list_exg_stocks(exg_id)
         cdt = datetime.now()
-        
+
         while cdt.minute >= 58:
             '''
             避免基本的時間差，似乎不是很需要，因為是用timer call的，所以local時間不會有error
@@ -41,7 +43,7 @@ class YfCraw(CrawBase):
         cdt_hr_std = cdt_hr.replace(hour=cdt_hr.hour-1)
         cdt_hr_end = cdt_hr - timedelta(microseconds=1)
 
-        print('acquiring data...\nfrom {} to {}.'.format(cdt_hr_std,cdt_hr_end) )
+        print('acquiring data...\nfrom {} to {}.'.format(cdt_hr_std, cdt_hr_end))
 
         for row in server_stock_list:
             yf_stock_symbol = '{}.tw'.format(row['symbol'])
@@ -65,8 +67,8 @@ class YfCraw(CrawBase):
             )
             # 3.to request body
             df.rename(columns={'index': 'start_ts', 'Open': 'open', 'High': 'high', 'Low': 'low',
-                    'Close': 'close', 'Volume': 'volume', 'Dividends': 'dividends', 'Stock Splits': 'stock_splits'}, inplace=True)
-            df['interval']='hour'
+                               'Close': 'close', 'Volume': 'volume', 'Dividends': 'dividends', 'Stock Splits': 'stock_splits'}, inplace=True)
+            df['interval'] = 'hour'
             body = json.loads(df.to_json(orient="records"))[0]
             # print(df, '\n')
             # print(body)
@@ -84,4 +86,4 @@ class YfCraw(CrawBase):
                 print(response.text)
             except Exception as e:
                 print(e)
-    
+        return

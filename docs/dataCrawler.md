@@ -36,6 +36,8 @@
       * 有swagger 
         * `https://query1.finance.yahoo.com/v8/finance/chart/2330.TW?interval=1d`
         * `https://query1.finance.yahoo.com/v8/finance/chart/2330.TW?region=US&lang=en-US&includePrePost=false&interval=2m&useYfid=true&range=1d&corsDomain=finance.yahoo.com&.tsrc=finance`
+      * column
+        * tick 是指起始時間，對於hour kbar 這種時間不會整除的要很小心(13:00~13:30)，比如成交量一定會比別人手，造成誤判
       * 根據[〈Free Stock Data for Python Using Yahoo Finance API〉](https://towardsdatascience.com/free-stock-data-for-python-using-yahoo-finance-api-9dafd96cad2e#:~:text=Rate Limitation,of 48%2C000 requests a day).)的說法，Yahoo Finance的API的限制為：Using the Public API (without authentication), you are  limited to 2,000 requests per hour per IP (or up to a total of 48,000  requests a day)。
         * 限制蠻麻煩的，台股約1116，hourly 就是最高限制了，
         * 可以算一下，minutely, 1116\*60=60000 per hour
@@ -52,7 +54,6 @@
         * 60min~, 2y max,
 
         * 1d,,
-
       * yahoo 的資料的volume 是成交股數而不是成交金額。用成交金額比較有通用性
 
         * 自己乘close 就好

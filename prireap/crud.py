@@ -26,12 +26,14 @@ def get_exchange(db: Session, exchange_id: int):
 def get_exchange_by_code_name(db: Session, code_names: Optional[List[str]] = None):
     return db.query(models.Exchange).filter(models.Exchange.code_name.in_(code_names)).all()
 
-def modify_exchange(db:Session, exchange_id: int, exchange:schemas.ExchangeCreate):
+
+def modify_exchange(db: Session, exchange_id: int, exchange: schemas.ExchangeCreate):
     db_exchange = models.Exchange(**exchange.dict())
-    print(db_exchange,'\n\n*\n', exchange, exchange.dict())
-    db.query(models.Exchange).filter(models.Exchange.id==exchange_id).update(exchange.dict())
+    # print(db_exchange, '\n\n*\n', exchange, exchange.dict())
+    db.query(models.Exchange).filter(
+        models.Exchange.id == exchange_id).update(exchange.dict())
     db.commit()
-    return 
+    return
 
 
 def delete_exchange(db: Session, exchange_id: int):
@@ -180,10 +182,10 @@ def create_stockKMins(db: Session, stockKBar: List[schemas.StockKBarBase]):
 def get_stockKHours_with_filter(db: Session, stock_ids: Optional[List[int]] = None, start: datetime = None, end: datetime = None):
     '''
     '''
-    st_of_end=None
+    st_of_end = None
     if end != None:
         st_of_end = end-timedelta(hours=1)+timedelta(microseconds=1)
-    print(stock_ids, start, end)
+    # print(stock_ids, start, end)
     return db.query(models.StockKHour).filter(
         crit_in_with_check_none(models.StockKHour.start_ts.__ge__, start),
         crit_in_with_check_none(models.StockKHour.start_ts.__lt__, st_of_end),
@@ -225,16 +227,20 @@ def create_stockKHours(db: Session, stockKBar: List[schemas.StockKBarBase]):
 
 def get_stockKDays_with_filter(db: Session, stock_ids: Optional[List[int]] = None, start: datetime = None, end: datetime = None):
     '''
+    https://www.kite.com/python/docs/sqlalchemy.orm.Query.yield_per
     '''
-    st_of_end=None
+    st_of_end = None
     if end != None:
         st_of_end = end-timedelta(hours=1)+timedelta(microseconds=1)
-    print(stock_ids, start, end)
-    return db.query(models.StockKDay).filter(
+    # print(stock_ids, start, end)
+    print('start sqlalchemy query')
+    db_kbars= db.query(models.StockKDay).filter(
         crit_in_with_check_none(models.StockKDay.start_ts.__ge__, start),
         crit_in_with_check_none(models.StockKDay.start_ts.__lt__, st_of_end),
         crit_in_with_check_none(models.StockKDay.stock_id.in_, stock_ids)
-    ).all()
+    ).yield_per(1000).all()
+    print('finish db query')
+    return db_kbars
 
 
 def get_stockKDay(db: Session, kday_id: int):
@@ -249,12 +255,34 @@ def get_stockKDay_by_stock_and_start(db: Session, stock_id: int, start: datetime
 
 
 def create_stockKDay(db: Session, stockKBar: schemas.StockKBarBase):
-    
+
     db_stockKBar = models.StockKDay(**stockKBar.dict())
     db.add(db_stockKBar)
     db.commit()
     db.refresh(db_stockKBar)
     return db_stockKBar
+
+
+def list_kdays_dupli(db: Session, stockKBars: schemas.List[schemas.StockKBarCreate]):
+    dupli_kdays=[]
+    for i in stockKBars:
+        db_kbar=get_stockKDay_by_stock_and_start(db=db, stock_id=i.stock_id, start=i.start_ts) #too slow
+        if db_kbar:
+            dupli_kdays.append({'stock_id':i.stock_id,'start_ts':i.start_ts})
+        # print('fin one check')
+
+    return dupli_kdays
+            
+
+
+def create_stockKDays(db: Session, stockKBars: List[schemas.StockCreate]):
+    db_stockKBars = [models.StockKDay(**i.dict()) for i in stockKBars]
+    db.add_all(db_stockKBars)  # this use for loop of add
+    db.commit()
+    [db.refresh(i) for i in db_stockKBars]
+    # rst=db.refresh(db_stockKBars)
+    return db_stockKBars
+
 
 def delete_kday(db: Session, kday_id: int):
     db_kday = db.query(models.StockKDay).filter(
@@ -263,12 +291,3 @@ def delete_kday(db: Session, kday_id: int):
     db.commit()
     return
 
-def create_stockKDays(db: Session, stockKBar: List[schemas.StockKBarBase]):
-    '''
-    not yet used
-    '''
-    db_stockKBars = models.StockKDay(**stockKBar.dict())
-    db.add_all(db_stockKBars)
-    db.commit()
-    db.refresh(db_stockKBars)
-    return db_stockKBars

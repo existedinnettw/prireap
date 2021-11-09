@@ -2,8 +2,9 @@
 # import asyncio
 # import aiohttp
 # from requests import async
-import grequests
-import requests  # Yes. Import requests after grequests
+# import grequests #it seem gevent, monkey patch cause something on windos # Yes. Import requests after grequests
+# gevent 本質是patch，應該用asyncio 代替
+import requests
 import os
 from dotenv import load_dotenv
 from urllib.parse import urljoin
@@ -24,9 +25,11 @@ import yfinance as yf
 from threading import Event  # use event to control 先後
 from enum import Enum, auto
 import pandas as pd
+import functools
 
 
 load_dotenv()
+
 
 
 class CrawBase(metaclass=abc.ABCMeta):
@@ -145,7 +148,7 @@ class CrawBase(metaclass=abc.ABCMeta):
         * 如果是要掃瞄缺少的資料，可以直接在loop call 這個function，同時自己改start & end time.
         * 1:00~1:30 acquire data 會有資料，可是
         '''
-        if not self.khour_event.wait(timeout=3):
+        if not self.khour_event.wait(timeout=60):
             warnings.warn(
                 'Some problem occur, no kmin event signal come...', RuntimeWarning)
         print('/********************************/\ncreate_khour_of_cur routine at {}....'.format(datetime.now()))
@@ -163,27 +166,33 @@ class CrawBase(metaclass=abc.ABCMeta):
         * 要處理sync timeing 問題
         TODO:
         * TWSE 資料更新時間不確定，且資料內沒有標時間
-        * grequests 會導致local server的 sqlalchemy怪怪的。
+        * grequests 會導致local server的 sqlalchemy怪怪的。目前先不async
+        * 如果不在official名單內的(下市)要delete，上市的要add。
         '''
-
+        print('/********************************/\ncreate_kday_of_cur routine at {}....'.format(datetime.now()))
         url = urljoin(self.TWSE_OPENAPI_URL, 'exchangeReport/STOCK_DAY_ALL')
         r = requests.get(url)
         df_stock_kday = pd.DataFrame.from_dict(r.json())
 
         df_local_stocks = pd.DataFrame.from_dict(self.list_exg_stocks())
         # print(df_local_stocks)
+        # df_listed = df_stock_kday.merge(df_local_stocks, how = 'outer' ,indicator=True).loc[lambda x : x['_merge']=='left_only']
+        # df_shimoichi=df_stock_kday.merge(df_local_stocks, how = 'outer' ,indicator=True).loc[lambda x : x['_merge']=='right_only']
         df_join = pd.merge(left=df_stock_kday, right=df_local_stocks,
                            how='left', left_on='Code', right_on='symbol')
         # print(df_join.replace(r'^\s*$', None, regex=True))
-        print(df_join)
+        # print(df_join)
         # raise
 
-        rs = [] #Wed, 03 Nov 2021 21:00:42 GMT
-        r_date = datetime.strptime(r.headers['last-modified'],"%a, %d %b %Y %H:%M:%S %Z")
-        r_date = r_date.replace(hour=1, minute=0, second=0) #TPE time better method
+        r_date = datetime.strptime(
+            r.headers['last-modified'], "%a, %d %b %Y %H:%M:%S %Z").astimezone(tz=pytz.utc)  # e.g. Wed, 03 Nov 2021 21:00:42 GMT
+        # 一般來說會在utc 13:00 update (TPE 21點)
+        # print(r_date)
+        r_date = r_date.replace(hour=13, minute=30, second=0)
         # print(r_date)
         # raise
         '''
+        rs = [] 
         for row in df_join.iterrows():
             # add to local server
             row=row[1] #the second one is series
@@ -200,30 +209,31 @@ class CrawBase(metaclass=abc.ABCMeta):
         print(resp[0].text)
         '''
         for row in df_join.iterrows():
-            row=row[1]
+            row = row[1]
             # print(row['symbol'])
             body = {'stock_id': row['id'], 'start_ts': r_date.isoformat(), 'open': row['OpeningPrice'],
-                                'high': row['HighestPrice'], 'low': row['LowestPrice'], 'close': row['ClosingPrice'],
-                                'volume': row['TradeVolume'], 'transaction': row['Transaction'], 'interval': 'day', }
-            body={k:v for k,v in body.items() if v}
+                    'high': row['HighestPrice'], 'low': row['LowestPrice'], 'close': row['ClosingPrice'],
+                    'volume': row['TradeVolume'], 'transaction': row['Transaction'], 'interval': 'day', }
+            body = {k: v for k, v in body.items() if v}
             try:
                 response = requests.post(
                     urljoin(os.getenv('SERVER_URL'), 'kbars'), json=body)
                 response.raise_for_status()
-                print('sucess to add new {} (stock_id:{}) khour to local server.'.format(
+                print('sucess to add new {} (stock_id:{}) kday to local server.'.format(
                     row['symbol'], row['id']))
             except requests.exceptions.HTTPError as e:  # e.g. 400, 401, 404...
                 print(e)
-                print('symbol:{}, response text:{}'.format(row['symbol'], response.text))
+                print('symbol:{}, response text:{}'.format(
+                    row['symbol'], response.text))
                 # print(body)
                 # print(type(body['high']))
             except Exception as e:
                 print(e)
             # if row['symbol']=='00684R':
             #     break
+        return
 
     # @abc.abstractmethod
-
     def check_open(self):
         '''
         This method is design to check if the exchage is open,
@@ -233,12 +243,18 @@ class CrawBase(metaclass=abc.ABCMeta):
         At defaul, use yahoo finance api to solve this problem, and child class can't overrides it to
             achieve better performance.
         return: True or False
+        TODO:
+        * set timeout to request to prevent strange behavior
+        * 試搓的時候就會return true，這樣是正確的嗎?: 不是，這樣會執行兩次tradeday routine
         '''
+
         tsmc = yf.Ticker("2330.tw")
         cdt = datetime.now()
         start = cdt-timedelta(minutes=1)
         # end=cdt+timedelta(minutes=1)
         # print('{}\n'.format(start))
+        print('checking open...')
+        # https://query1.finance.yahoo.com/v8/finance/chart/2330.TW?period1=1636419064&period2=1636419124&interval=1d&includePrePost=False&events=div%2Csplits
         for i in range(3):
             df = tsmc.history(
                 # period="2y",
@@ -250,7 +266,8 @@ class CrawBase(metaclass=abc.ABCMeta):
                 # no response, wait and try again...
                 time.sleep(0.5)
             else:
-                print(df)
+                print('exchange is open')
+                # print(df)
                 return True
         warnings.warn("Doesn't detecte exchange opened.", RuntimeWarning)
         return False
@@ -271,8 +288,9 @@ class CrawBase(metaclass=abc.ABCMeta):
 
     def trade_day_routine(self):
         '''
-        this function is supposed to be called "after" few ms of exchange start. 
-        or called during trade day time.
+        * this function is supposed to be called "after" few ms of exchange start. 
+            or called during trade day time.
+        * 只會在開市時執行一次，分配“當天”任務，所以一定要加end，或是次數限制
         '''
         print('trade_day_routine at {}....'.format(datetime.now()))
         if self.check_open():  # it possible that exchange close during local holiday.
@@ -296,6 +314,13 @@ class CrawBase(metaclass=abc.ABCMeta):
                                minute=0,  # hourly
                                timezone=pytz.utc, jitter=None, id='HOUR_ROUTINE')
 
+            run_date = datetime.utcnow()
+            run_date = run_date.replace(hour=22, minute=0)
+            self.sched.add_job(self.create_kday_of_cur, 'date',
+                               #    start_date=self.trade_day_start_dt +timedelta(hours=1),
+                               #    end_date=self.trade_day_end_dt,
+                               run_date=run_date, id='DAY_ROUTINE')
+
         else:
             warnings.warn(
                 "the exchange doesn't open today, or there are some bug in your code or setting...", RuntimeWarning)
@@ -304,8 +329,9 @@ class CrawBase(metaclass=abc.ABCMeta):
         # print(event)
         if not event.exception:
             print('job_id:{}'.format(event.job_id))
-        if event.job_id in ['HOUR_ROUTINE']:
+        if event.job_id in ['HOUR_ROUTINE', 'TRADE_DAY_ROUTINE', 'DAY_ROUTINE']:
             self.sched.print_jobs()
+            print()
 
     def run(self):
         '''
@@ -323,6 +349,7 @@ class CrawBase(metaclass=abc.ABCMeta):
                           'output_weekday_names': True}).parts  # .schedule(reference)
 
         # apscheduler bug: https://github.com/agronholm/apscheduler/issues/286
+        # trade_day_routine 只會在開市時執行一次
         job = self.sched.add_job(self.trade_day_routine, 'cron',
                                  minute=cron_parts[0], hour=cron_parts[1],
                                  day=cron_parts[2], month=cron_parts[3],
@@ -331,5 +358,17 @@ class CrawBase(metaclass=abc.ABCMeta):
             self.trade_day_routine()  # in trade day time, fire immediately
 
         self.sched.print_jobs()
+        print()
         while True:
-            time.sleep(10*60)
+            time.sleep(60)
+
+
+class BasicCraw(CrawBase):
+    def __init__(self):
+        super().__init__()
+
+    def create_kmin_of_cur(self):
+        return super().create_kmin_of_cur()
+
+    def create_khour_of_cur(self):
+        return super().create_khour_of_cur()

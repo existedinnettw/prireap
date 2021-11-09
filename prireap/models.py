@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 # numeric type contain decimal in sql
-from sqlalchemy import Column, Integer, String, Enum, Numeric, DateTime, Sequence  # , Text
+from sqlalchemy import Column, Integer, String, Enum, Numeric, DateTime, TIMESTAMP, Sequence, Date, Index  # , Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship, backref, validates, sessionmaker
@@ -61,7 +61,7 @@ class StockKMin(Base):
     id = Column(Integer, Sequence('kmin_id_seq'), primary_key=True)
     stock_id = Column(Integer, ForeignKey(
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
-    start_ts = Column(DateTime, nullable=False)
+    start_ts = Column(TIMESTAMP(timezone=True), nullable=False)
     # interval = Column(Integer, nullable=False )
     open = Column(Numeric(scale=2), nullable=True)
     high = Column(Numeric(scale=2), nullable=True)
@@ -72,14 +72,15 @@ class StockKMin(Base):
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
     UniqueConstraint('stock_id', 'start_ts', name='uq_stk_ts')
-
+Index('kmin_stockid_startts', StockKMin.stock_id, StockKMin.start_ts, unique=True) #, unique=True
+#CREATE UNIQUE INDEX kmin_stockid_startts ON public.stock_k_min USING btree (stock_id, start_ts);
 
 class StockKHour(Base):
     __tablename__ = 'stock_k_hr'
     id = Column(Integer, Sequence('khr_id_seq'), primary_key=True)
     stock_id = Column(Integer, ForeignKey(
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
-    start_ts = Column(DateTime, nullable=False)
+    start_ts = Column(TIMESTAMP(timezone=True), nullable=False)
     # interval = Column(Integer, nullable=False )
     open = Column(Numeric(scale=2), nullable=True)
     high = Column(Numeric(scale=2), nullable=True)
@@ -90,15 +91,15 @@ class StockKHour(Base):
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
     UniqueConstraint('stock_id', 'start_ts', name='uq_stk_ts')
-
+Index('khr_stockid_startts', StockKHour.stock_id, StockKHour.start_ts, unique=True) #, unique=True
+#CREATE UNIQUE INDEX khr_stockid_startts ON public.stock_k_hr USING btree (stock_id, start_ts);
 
 class StockKDay(Base):
     __tablename__ = 'stock_k_day'
     id = Column(Integer, Sequence('kday_id_seq'), primary_key=True)
     stock_id = Column(Integer, ForeignKey(
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
-    start_ts = Column(DateTime, nullable=False)
-    # interval = Column(Integer, nullable=False )
+    start_ts = Column(TIMESTAMP(timezone=True), nullable=False) #sqlalchemy.types.Date, 會造成column type 和kmin, khour 不同
     open = Column(Numeric(scale=2), nullable=True)
     high = Column(Numeric(scale=2), nullable=True)
     low = Column(Numeric(scale=2), nullable=True)
@@ -108,7 +109,8 @@ class StockKDay(Base):
     dividends = Column(Integer, nullable=True)
     stock_splits = Column(Integer, nullable=True)
     UniqueConstraint('stock_id', 'start_ts', name='uq_stk_ts')
-
+Index('kday_stockid_startts', StockKDay.stock_id, StockKDay.start_ts, unique=True) #, unique=True
+#CREATE UNIQUE INDEX kday_stockid_startts ON public.stock_k_day USING btree (stock_id, start_ts);
 
 if __name__ == '__main__':
 
