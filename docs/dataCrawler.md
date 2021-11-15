@@ -1,5 +1,9 @@
 # data crawler
 
+[toc]
+
+
+
 這個檔案focus 在data crawler 如何做
 
 
@@ -453,3 +457,26 @@ get resources/ 基本上是一定會需要filter的
 
 * [How do I share a single job store among one or more worker processes?¶](https://apscheduler.readthedocs.io/en/stable/faq.html)
 * 
+
+# websocket
+
+主要是做雙向功能
+
+* [WebSockets - A Conceptual Deep Dive](https://ably.com/topic/websockets#ws)
+
+websocket 是 L7, 和MQTT, HTTP 都是同一層。WS 採用TCP（L4），和MQTT, HTTP的底層一樣。ws  為了相容性，使用和http一樣的port，所以不會被firewall封，但它是獨立於http的東西。相比於MQTT，ws 並不管要採用那種通訊模式，可以隨意implement，MQTT則要求使用pub, sub。但是很多lib 會在implement WS本身的同時，加入通訊模式的function e.g. socket.io，除此之外的lib只有WS本身，要做各種模式則要自己parse string。其它 Web Application Messaging Protocol ...可能有提供類似功能，但不多人用所以直接不研究。
+
+基本上lib上我建議socket.io
+
+要通過websocket 傳資料，還是先用websocket be notified 之後，再用http query? 可能用websocket 比較好，pub client 送一次資料到server就好，server 也能直接送出資料減少處理。
+
+## socket io
+
+> Please note that broadcasting is a **server-only** feature.
+
+如何做? 一個event_id 專門讓crawler(pub client) update 資料到server。然後create room 分別有 sub_room_id。首先sub client 連接並全部加入到某個 room e.g. kday_sub，然後pub client也連接。接著pub client emit 資料 to server with id e.g. kday_pub，server 在該id call back 裡將資料發到 room: kday_sub 裡所有的client。
+
+client之所以要一個room，而不是直接broadcast emit，是因為這樣所有的client 都會收到，雖然client 沒有該event id callback就會乎略，但已傳送過去，非常costy net bandwidth & client processing ability
+
+
+

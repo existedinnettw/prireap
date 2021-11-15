@@ -4,8 +4,8 @@
 '''
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
-from fastapi.responses import JSONResponse#, ORJSONResponse
-from .. import schemas, crud, models
+from fastapi.responses import JSONResponse, Response#, ORJSONResponse
+from .. import schemas, crud, models, rawCrud
 from ..dependencies import get_db
 from typing import List, Optional, Any
 from sqlalchemy.orm import Session
@@ -19,17 +19,22 @@ router = APIRouter(
     # responses={404: {"description": "Not found"}},
 )
 
-def decimal_default(obj):
-    if isinstance(obj, decimal.Decimal):
-        return float(obj)
-    raise TypeError
+# def decimal_default(obj):
+#     if isinstance(obj, decimal.Decimal):
+#         return float(obj)
+#     raise TypeError
 
 class ORJSONResponse(JSONResponse):
     media_type = "application/json"
 
-    def render(self, content: Any) -> bytes:
-        return orjson.dumps(content, default=decimal_default)
+    def render(self, content: Any) -> bytes: #
+        return orjson.dumps(content, default=str) #default=decimal_default)
 
+class JSONDataResponse(JSONResponse): 
+    #function override
+    def render(self, content: str) -> bytes:#return bytes type by function bytes or encode
+        return content.encode("utf-8")
+    
 
 @router.get(
     "/kbars/",
@@ -57,31 +62,8 @@ def get_kbars(
             db, start=from_ts, stock_ids=stock_ids, end=to_ts)
         return db_kbars
     elif interval == schemas.Interval.day:
-        '''
-        db query(1.5min, 用yield_per 之後) 和 return response(8min) 花非常多時間，特別是return
-        db部份實際用sql query是10s
-        return response 會那麼久我猜是花一堆時間和memory在pydantic model 上。
-        現在看起來用python 做backend也是很錯誤的，任何compile language 都好
-        # 改進
-        * https://fastapi.tiangolo.com/advanced/response-directly/
-        * https://github.com/tiangolo/fastapi/issues/788
-        改完之後只要30s，大部份時間花在 to json
-        '''
-        db_kbars = []
-        db_kbars = crud.get_stockKDays_with_filter(
-            db, start=from_ts, stock_ids=stock_ids, end=to_ts) #return in db model object
-        print('finish getting')
-        # print(vars(db_kbars[0]))
-        list_of_dicts = [ row.__dict__ for row in db_kbars]
-        [ row.pop('_sa_instance_state') for row in list_of_dicts]
-        print('finish to dict')
-        # dictret.pop('_sa_instance_state', None)
-        # print(list_of_dicts)
-        json_resp = ORJSONResponse(list_of_dicts) #if use this directly, need to patch decimal stringnify 
-        # # print(json_resp)
-        # print('finish to json')
-        return json_resp
-        # return list_of_dicts
+        list_of_dicts=rawCrud.get_stockKDays_with_filter(db, start=from_ts, stock_ids=stock_ids, end=to_ts)
+        return ORJSONResponse(list_of_dicts )
     else:
         raise HTTPException(
             status=404, detail="unavailable query parameter:interval ")

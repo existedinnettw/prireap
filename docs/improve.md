@@ -25,6 +25,28 @@ type check 不僅沒有提升性能反而拖慢，但是引入type check後，�
       1. 但是如果用fastapi提供的orjson，指定response class，會變4:30，所以一定要自己直接return json jesponse，可能是fastapi有做些什麼
    2. 用pandas 可能更好，有加速
 
+使用pd.read_sql 之後，query的速度為接近1min, pd to_json 不到10s。也就是共1min。
+pd read sql 也是用sqlalchemy ，所以看起來是卡在sqlalchemy
+
+我現在用 psycopg2 直接query 看看要多久，確定是否為sqlalchemy的問題，有可能其實是python 的問題。
+實測之後psycopg約在16s，比raw query慢一點但improve performance可以接受再多花心力。
+要確認是不是sqlalchemy 的鍋，用connection 進行query 試試，[Working with Engines and Connections](https://docs.sqlalchemy.org/en/14/core/connections.html#module-sqlalchemy.engine) ，它是return row of dict 這種有mapping的，我估計是有用class去轉換psycopg2 的 tuple --> dict，應該是不會有多好。
+
+用了這個 [connect_psycopg2_to_pandas.py](https://gist.github.com/jakebrinkmann/de7fd185efe9a1f459946cf72def057e), [Working with the DBAPI cursor directly](https://docs.sqlalchemy.org/en/14/core/connections.html#working-with-the-dbapi-cursor-directly)。大約50s（少10s），所以可能不是sqlalchemy 的鍋，而是tuple 轉pd dataframe所需的耗費。
+確實是，有交叉比對 psycopg2加 read_sql，差不多就是50s。所以多出來的35s都用在pandas 的轉換。
+
+再來要優化了話就是棄用pandas，自己把tuple 轉成json
+
+[How to return dictonary or json if I use psycopg2?](https://stackoverflow.com/questions/57209769/how-to-return-dictonary-or-json-if-i-use-psycopg2), [How to overcome "datetime.datetime not JSON serializable"?](https://stackoverflow.com/questions/11875770/how-to-overcome-datetime-datetime-not-json-serializable) 
+測試之後，如果沒有用dict format 而是直接變成很多array，fetch 部分一樣16s，json 部分可達18s，共約30s。使用orjson之後只要8s
+
+如果用RealDictCursor，fetching 會慢到超過1min, 用DictCursor 是51s，且一樣是return array。所以如果要用必須自己把tuple 先轉成 dict
+
+改完之後，query 保持在16s, 轉成dict (list comprehension)約9s, 轉成json 8s。可以看到只要牽涉到複雜一點的轉換，特別是class，就會花很多時間。現在總共30s多一點點，勉強可以接受。相比之下就發現，pandas 為了轉成df，其中多花了30s，也就是一半以上都是為了轉成df。
+這其實很好笑，為了程式的架構，盡可能用class，完成之後，為了速度，全部再拆掉。這個拆掉是完全必要的，從原本10min --> 30s，快了20倍，而且不是為了數字好看，不做了話根本用不了。
+
+parallel query  在純sql下，還是10s(4 workers)，沒提升。
+
 # backend 架構
 
 之所以用web server backend 是因為考慮用websocket 簡化synchronous data flow。那麼其實只需要在online 時使用 websocket 就好，一般training 時的資料完全可以從DB裡直接拿。甚至websocket 完全不傳送資料，完全只notify。
@@ -34,6 +56,7 @@ type check 不僅沒有提升性能反而拖慢，但是引入type check後，�
 * [Working with Data Analysis and Relational Databases in Python](https://www.opensourceforu.com/2019/08/working-with-data-analysis-and-relational-databases-in-python/)
 
 是直接拿db裡的資料，大量使用CTE。如果覺得每次都寫sql太不structure，包成function (和 web backend 裡的crud 一模一樣)，一樣可以有很好的structure。但是節省開發api時花的時間e.g. restful api path name，還有最終的性能不需要經過http request 和 因此產生的傳送時間，不需要轉成json再轉回pd dataframe。
+我在q_trade裡面也是用這個方法，pd.read_sql + sqlalchemy complie 成 sql statement，可以兼顧速度和可讀性。
 
 如果使用spark 等方式，也會處理好資料傳輸的問題，不過我不確定有沒有辦法去stream資料，沒辦法了話，該部份獨立用backend 就好。
 
