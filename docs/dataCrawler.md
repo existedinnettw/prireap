@@ -35,6 +35,7 @@
     * `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20211001&stockNo=2330`
     * 證交所, 櫃買中心, 公開資訊觀測站, 期交所。
     * `https://www.twse.com.tw/en/exchangeReport/STOCK_FIRST?response=html&date=20210716`
+    
   * yahoo finance api
     * [Yahoo Finance API](https://www.yahoofinanceapi.com/)
       * 有swagger 
@@ -52,62 +53,89 @@
       * yfinance一次最多quote 10檔，1000檔也要100次
         * [使用Python及Yahoo Finance API抓取台股歷史資料](https://aronhack.com/retrieve-stock-historical-data-with-python-and-yahoo-finance-api/)
         * 分k只能抓到前30日的資料，1次7d max。
-
+  
         * 5~30min k, 60d max, 
-
+  
         * 60min~, 2y max,
-
+  
         * 1d,,
       * yahoo 的資料的volume 是成交股數而不是成交金額。用成交金額比較有通用性
-
+  
         * 自己乘close 就好
     * yfinance 
       * 而且短期大量query data之後應該是有限速，實測用yfinance acquire khour 也還是蠻慢的，整個台股，至少5min。如果可以找到kmin的source ，還不如每個小時用kmin的資料sum up
+    
+  * 以下如果券商api 掛了（非常常見），我建議用selenium 直接控制web browser 操作
+    
   * 群益API
+    
     * [SKQuoteLib_RequestStocks的限制](https://www.capital.com.tw/Service2/download/API_BBSpage.asp?BBSID={6BF05CD6-B3E3-4039-B554-89D56FB09827})
       * max 200筆，即時報價
-  * 元大one api
-    * [券商API功能比較表 - GSnail](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjVqN-8wunzAhXUy4sBHY83BMsQFnoECAMQAw&url=https%3A%2F%2Fgsnail.trade%2Fweb%2Fins%2Fapi_compare&usg=AOvVaw0ZMY8qv_yKIm-9nFLJZzEX)
-      * 2000檔的訂閱應該是很夠了
-    * 但是元大的API很多也很亂，要花一點時間確定訊息對不對
-
+    
+  * 元大api
+    
+    * 但是元大的API很多也很亂，要花一點時間確定訊息對不對，很多也是legacy。網站超連結各種404
+    * 元大證券
+      * 證券唯一的api，doc裡其實就是 **one API**，測試軟體說不支援安裝Microsoft .NET Framework 4.5.2（很久以前的framework）。其實後續的.net framework 可向前支援，所以win10, 11 都可以實行，直接試試api 交易元件裡的範例就好。
+      * [api 下單](https://www.yuanta.com.tw/eYuanta/securities/DigitalArea/ApiOrder?MainId=00410&C1=8d6fa61e-cbc3-45d8-b99e-3c8c6477f1ee&C2=&Level=1)
+      * one api
+        * [券商API功能比較表 - GSnail](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjVqN-8wunzAhXUy4sBHY83BMsQFnoECAMQAw&url=https%3A%2F%2Fgsnail.trade%2Fweb%2Fins%2Fapi_compare&usg=AOvVaw0ZMY8qv_yKIm-9nFLJZzEX)
+        * 2000檔的訂閱應該是很夠了
+    * 元大期貨
+      * 第三方
+        * multichart
+      * [元大API](https://www.yuantafutures.com.tw/pages/static-pages/service_future/product1_5.aspx?Node=d4debb8d-bef5-4a77-9973-f0eb0ae9cc0c)
+        * 很早以前就有
+        * 交易api
+        * 國內行情API
+          * 只供查行情，有提供證券（股票）
+      * [元大smart api](https://www.yuantafutures.com.tw/pages/static-pages/service_future/product1_7.aspx?Node=65af4d99-3e51-4d4d-8802-ad5d9178187e)
+        * 新出的，但是現在載點整個404，感覺比較像是網站的超連結有問題
+        * 透過command line，加上parse 檔案，繞過不同語言間需要calling 的問題
+    * 現階段建議 one api，如果smart 修好就建議smart。
+    * ref
+      * [ Day-14 券商串接：串接元大期貨行情 API（一） ](https://ithelp.ithome.com.tw/articles/10222522)
+        * python 和 C# 連接教學
+      * [用 Python 超簡單自動下單](https://www.finlab.tw/%E9%80%9A%E7%94%A8%E8%87%AA%E5%8B%95%E4%B8%8B%E5%96%AE%E6%B3%95%EF%BC%88%E4%B8%8B%EF%BC%89/)
+        * 用selenium
+    
   * **永豐金 api** 
-
+  
     * Tick 資料與 K 棒
-
+  
     * > 台灣的金融業，api 基底可能都是.net 平台。 所以這個python 一樣也只能在windows，當然也可以用docker。
-
+  
     * [永豐金證券程式交易 — Python API 準備 in Windows env.](https://medium.com/@jd7222/%E6%B0%B8%E8%B1%90%E8%AD%89%E5%88%B8%E6%A9%9F%E5%99%A8%E4%BA%BA-python-api-%E6%BA%96%E5%82%99-in-windows-env-d626cabe6b6e)
-
+  
     * 由於目前台灣就永豐金的python api 做的最完善，接下來也要會其會準
-
+  
     * 注意 api 有 [使用限制](https://sinotrade.github.io/tutor/limit/) >500times/5s 會被ban
-
+  
       * 也就是1116檔，大約要10~15 s，勉強可接受
-
+  
     * 分kbar 保留兩年，查兩年前的資料只會得到null data
-
+  
   * **multicharts**
-
+  
     * 台灣專業操盤者的標準，就算不用也要知道
     * 一般版月費大約1000，專業版要3000
-
+  
   * googlefinance
-
+  
     * 參考datasource
-
+  
   * [grs ](https://github.com/toomore/grs) 
-
+  
     * > grs 台灣上市上櫃股票價格擷取
-
+  
   * [twstock](https://github.com/mlouielu/twstock)
-
+  
   * [tsrtc](https://github.com/Asoul/tsrtc)
-
+  
   * [tsec](https://github.com/Asoul/tsec)
-
+  
   * **[FinMind](https://github.com/FinMind/FinMind)**
-
+  
     * 現成的台股API，free user 有一點限制
     * 項目很多，可以搭配使用，資料從 20年前以上到現在都有，從證交所來的
     * 有簡單的回測框架
@@ -463,6 +491,10 @@ get resources/ 基本上是一定會需要filter的
 主要是做雙向功能
 
 * [WebSockets - A Conceptual Deep Dive](https://ably.com/topic/websockets#ws)
+* [ [知識篇]淺談即時網頁通訊技術 - Polling / WebSocket / WebRTC ](https://ithelp.ithome.com.tw/articles/10237030)
+  * 發現WebRTC可以透過server，讓兩個client 直接建立連線省下一次傳輸蠻重要的
+  * webRTC是主用UDP（TCP 為輔）
+* ros 本身也是TCP(可選為UDP)
 
 websocket 是 L7, 和MQTT, HTTP 都是同一層。WS 採用TCP（L4），和MQTT, HTTP的底層一樣。ws  為了相容性，使用和http一樣的port，所以不會被firewall封，但它是獨立於http的東西。相比於MQTT，ws 並不管要採用那種通訊模式，可以隨意implement，MQTT則要求使用pub, sub。但是很多lib 會在implement WS本身的同時，加入通訊模式的function e.g. socket.io，除此之外的lib只有WS本身，要做各種模式則要自己parse string。其它 Web Application Messaging Protocol ...可能有提供類似功能，但不多人用所以直接不研究。
 
@@ -477,6 +509,47 @@ websocket 是 L7, 和MQTT, HTTP 都是同一層。WS 採用TCP（L4），和MQTT
 如何做? 一個event_id 專門讓crawler(pub client) update 資料到server。然後create room 分別有 sub_room_id。首先sub client 連接並全部加入到某個 room e.g. kday_sub，然後pub client也連接。接著pub client emit 資料 to server with id e.g. kday_pub，server 在該id call back 裡將資料發到 room: kday_sub 裡所有的client。
 
 client之所以要一個room，而不是直接broadcast emit，是因為這樣所有的client 都會收到，雖然client 沒有該event id callback就會乎略，但已傳送過去，非常costy net bandwidth & client processing ability
+
+* [The Socket.IO Server](https://python-socketio.readthedocs.io/en/latest/server.html)
+
+## 名詞
+
+$topic e.g. kday
+
+1. sub client  會以 sub_$topic event為名，傳送至server，然後被server 丟入 $topic_sub_gp的room
+
+2. pub client 會把data 以pub_$topic 的event name emit to server
+
+   1. > 這裡可能把pub 也設一個room，來確保only one pub source
+
+3. server中 pub_$topic event handler ，emit event name $topic to client
+
+* room 這個東西只是for server 端好管理發送對象，並非實際在pub sub 裡
+* 
+
+# async
+
+[Python Asyncio Part 5 – Mixing Synchronous and Asynchronous Code](https://bbc.github.io/cloudfit-public-docs/asyncio/asyncio-part-5.html)
+
+websocket 要保持連線，所以一個thread 一定會被block 住。要麻用 multithread 不然就是 asyncio。然而我的apscheduler 已經用multithread implement。
+
+* [Python APScheduler - How does AsyncIOScheduler work?](https://stackoverflow.com/questions/63001954/python-apscheduler-how-does-asyncioscheduler-work)
+  * 有範例
+
+* [How to set class attribute with await in __init__](https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init)
+  * 簡單來說就是很不直觀
+
+python 的 async 在我來看要不是一個半成品，就是設計錯誤。coroutine 和 function 語法很像，但絕不能視為同一個東西。coroutine 要執行時一定要在event loop裡，也就是要先產生event loop，而我完全不理解為什麼要把 event loop 拉出來，有什麼需求在使用時需要多個event loop？
+
+我們一定會希望完整的利用一個thread 的資源，一個thread內不同的event loop 只是讓它們無法有全盤的了解到底有那些coroutine ，並且兩者之間無法互相讓出資源。
+如果是multi thread，確實可以手動讓一個event loop 管理一個thread，但更好的是直接一個global 的任務調度管理器，所有thread的coroutine 等於是切成各個小部份，任務管理器可以自己調動執行那些小部份，io waiting 的部分就sleep，可以往下執行的部份如果main tread 沒空，且還有其它thread沒用到，就調用過來執行。這麼一來，把async 和 multi-threading 二合一。
+
+從需求面來看完全沒必要把event loop 獨立在interpreter外，而且使用這個不僅無利，還有害。因為它製造function 和 coroutine在calling時的差異，但我們always 需要它們一起工作。在本來sync 的工作流程中使用了async coroutine(function)，原本的sync function就需要變成async 來支援底下的async func，支援這個語法。
+
+實際上現在python程式應該怎麼寫？首先使用async 很多時候是必要，越來越常用到API，有沒有async 相差非常多。
+首先function 分兩種，1. 完成個別的小動作2. 串連小動作形成大動作。type 1根據所做的類型選擇sync or async。type2 則是看是否用到 async 的type1。理論上來說，最後的main, or run 必為async，因為包夠多一定會包到async。async 的type1 function 在 type2 function 以task 的身份使用(creat_task or gather)，盡量不要用event loop。
+之所以不將所有的function 都改成async ，特別是type1，是因為1.calling 所有function 都還必須加上await，2.而且尚無法知道會不會有什麼bug （目前asyncio都還在變動）。至於非所有type2都用async 則是因為1.asyncio 還在變動，不知道之後會不會改動。2.event loop並沒有能夠完全使用目前的所有功能e.g. class沒有async init。
+可能的缺點：type2如果非async，有可能之後一個小功能改async，上面好幾層都要更動。而且不是改async 而已，根據使用的方式在合理的地方插入create task。
 
 
 

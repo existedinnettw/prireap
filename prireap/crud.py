@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 # from sqlalchemy import or_, and_
 from . import models, schemas
 from typing import List, Optional, Callable
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 '''
 改成一個資料夾，裡面有分開的crud?
@@ -263,7 +263,7 @@ def create_stockKDay(db: Session, stockKBar: schemas.StockKBarBase):
     return db_stockKBar
 
 
-def list_kdays_dupli(db: Session, stockKBars: schemas.List[schemas.StockKBarCreate]):
+def list_kdays_dupli(db: Session, stockKBars: List[schemas.StockKBarCreate]):
     dupli_kdays=[]
     for i in stockKBars:
         db_kbar=get_stockKDay_by_stock_and_start(db=db, stock_id=i.stock_id, start=i.start_ts) #too slow
@@ -275,7 +275,7 @@ def list_kdays_dupli(db: Session, stockKBars: schemas.List[schemas.StockKBarCrea
             
 
 
-def create_stockKDays(db: Session, stockKBars: List[schemas.StockCreate]):
+def create_stockKDays(db: Session, stockKBars: List[schemas.StockKBarBase]):
     db_stockKBars = [models.StockKDay(**i.dict()) for i in stockKBars]
     db.add_all(db_stockKBars)  # this use for loop of add
     db.commit()
@@ -291,3 +291,88 @@ def delete_kday(db: Session, kday_id: int):
     db.commit()
     return
 
+#==================================dvd_split===============================================
+def get_dvd_split_by_stock_and_date(db:Session, stock_id:int, date:date):
+    return db.query(models.DvdEtSplt).filter(models.DvdEtSplt.stock_id == stock_id, models.DvdEtSplt.trade_date == date).first()
+
+def create_dvd_split(db:Session, dvd_split: schemas.DvdEtSplt):
+    db_dvd_split = models.DvdEtSplt(**dvd_split.dict())
+    db.add(db_dvd_split)
+    db.commit()
+    db.refresh(db_dvd_split)
+    return db_dvd_split
+
+def list_dvd_split_dupli(db: Session, dvd_splits: List[schemas.DvdEtSpltCreate]):
+    dupli_kdays=[]
+    for i in dvd_splits:
+        db_kbar=get_dvd_split_by_stock_and_date(db=db, stock_id=i.stock_id, date=i.trade_date) #too slow
+        if db_kbar:
+            dupli_kdays.append({'stock_id':i.stock_id,'start_ts':i.trade_date})
+        # print('fin one check')
+    return dupli_kdays
+            
+def create_dvd_splits(db: Session, dvd_splits: List[schemas.DvdEtSpltCreate]):
+    # print(dvd_splits)
+    db_dvd_splits = [models.DvdEtSplt(**i.dict()) for i in dvd_splits]
+    # print(db_dvd_splits)
+    db.add_all(db_dvd_splits)  # this use for loop of add
+    db.commit()
+    [db.refresh(i) for i in db_dvd_splits]
+    # rst=db.refresh(db_stockKBars)
+    return db_dvd_splits
+
+# ============================cfs================================
+def get_cfs_by_stock_and_date(db:Session, stock_id:int, date:date):
+    return db.query(models.CFS).filter(models.CFS.stock_id == stock_id, models.CFS.date == date).first()
+
+def create_cfs(db:Session, obj: schemas.CFS):
+    db_obj = models.CFS(**obj.dict())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+def list_cfs_dupli(db: Session, objs: List[schemas.CFSCreate]):
+    dupli_kdays=[]
+    for i in objs:
+        db_kbar=get_cfs_by_stock_and_date(db=db, stock_id=i.stock_id, date=i.date) #too slow
+        if db_kbar:
+            dupli_kdays.append({'stock_id':i.stock_id,'start_ts':i.date})
+        # print('fin one check')
+    return dupli_kdays
+            
+def create_cfss(db: Session, objs: List[schemas.CFSCreate]):
+    db_objs = [models.CFS(**i.dict()) for i in objs]
+    db.add_all(db_objs)  # this use for loop of add
+    db.commit()
+    [db.refresh(i) for i in db_objs]
+    # rst=db.refresh(db_stockKBars)
+    return db_objs
+
+# ============================cash flow================================
+def get_cash_flow_by_stock_and_date(db:Session, stock_id:int, date:date):
+    return db.query(models.CashFlow).filter(models.CashFlow.stock_id == stock_id, models.CashFlow.date == date).first()
+
+def create_cash_flow(db:Session, obj: schemas.CashFlow):
+    db_obj = models.CashFlow(**obj.dict())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+def list_cash_flow_dupli(db: Session, objs: List[schemas.CashFlowCreate]):
+    dupli_kdays=[]
+    for i in objs:
+        db_kbar=get_cash_flow_by_stock_and_date(db=db, stock_id=i.stock_id, date=i.date) #too slow
+        if db_kbar:
+            dupli_kdays.append({'stock_id':i.stock_id,'start_ts':i.date})
+        # print('fin one check')
+    return dupli_kdays
+            
+def create_cash_flows(db: Session, objs: List[schemas.CashFlowCreate]):
+    db_objs = [models.CashFlow(**i.dict()) for i in objs]
+    db.add_all(db_objs)  # this use for loop of add
+    db.commit()
+    [db.refresh(i) for i in db_objs]
+    # rst=db.refresh(db_stockKBars)
+    return db_objs

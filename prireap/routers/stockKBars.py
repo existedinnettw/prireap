@@ -13,6 +13,7 @@ from datetime import datetime
 import collections
 import orjson
 import decimal
+from .util import ORJSONResponse,JSONDataResponse
 
 router = APIRouter(
     tags=["kbars"],
@@ -23,23 +24,17 @@ router = APIRouter(
 #     if isinstance(obj, decimal.Decimal):
 #         return float(obj)
 #     raise TypeError
-
-class ORJSONResponse(JSONResponse):
-    media_type = "application/json"
-
-    def render(self, content: Any) -> bytes: #
-        return orjson.dumps(content, default=str) #default=decimal_default)
-
-class JSONDataResponse(JSONResponse): 
-    #function override
-    def render(self, content: str) -> bytes:#return bytes type by function bytes or encode
-        return content.encode("utf-8")
     
 
 @router.get(
     "/kbars/",
     # response_model=List[schemas.StockKBar]
     # response_class=ORJSONResponse
+    description=r"""
+        'interval':'day',
+        'from_ts':'2021-11-01T13:00:00+08:00',
+        'to_ts':'2021-11-01T13:00:00+08:00',
+        'stock_ids':[1,2]"""
 )
 def get_kbars(
         interval: schemas.Interval = Query(schemas.Interval.day),
@@ -71,12 +66,13 @@ def get_kbars(
 
 @router.get(
     "/kbars/{kbar_id}",
-    response_model=schemas.StockKBar
+    response_model=schemas.StockKBar,
 )
 def get_kbar_by_id(
         kbar_id: int,
         interval: schemas.Interval = Query(schemas.Interval.day),
-        db: Session = Depends(get_db)):
+        db: Session = Depends(get_db)
+        ):
     if interval == schemas.Interval.min:
         db_kmin = crud.get_stockKMin(db, kbar_id)
         if db_kmin is None:

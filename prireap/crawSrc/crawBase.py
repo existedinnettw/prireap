@@ -6,15 +6,17 @@
 # gevent 本質是patch，應該用asyncio 代替
 import requests
 import os
+from os import getenv
 from dotenv import load_dotenv
 from urllib.parse import urljoin
 import time
 from datetime import datetime, timedelta
 import json
+import orjson
 import abc
 # from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
-# from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # from apscheduler.triggers.cron import CronTrigger
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 import pytz
@@ -26,11 +28,16 @@ from threading import Event  # use event to control 先後
 from enum import Enum, auto
 import pandas as pd
 import functools
+import socketio
+import asyncio
+import httpx
+from .asioc import sio
 
 
 load_dotenv()
 
 
+tpe_tz = pytz.timezone('Asia/Taipei')
 
 class CrawBase(metaclass=abc.ABCMeta):
     '''
@@ -40,7 +47,9 @@ class CrawBase(metaclass=abc.ABCMeta):
     def __init__(self):
         self.TWSE_OPENAPI_URL = 'https://openapi.twse.com.tw/v1/'
         self.tpe_exg = self.get_tpe_exg()
-        self.sched = BackgroundScheduler()
+        self.sched = AsyncIOScheduler()
+        self.sio=sio
+
         # may split scheduler
         self.sched.add_listener(
             self._listner, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
@@ -48,9 +57,21 @@ class CrawBase(metaclass=abc.ABCMeta):
         self.khour_event = Event()
         self.kday_event = Event()
 
+        #await can't outside async function
+        # await self.sio.connect(url=urljoin(os.getenv('SERVER_URL'),'ws'), socketio_path="/ws/socket.io", wait_timeout = 1) 
+
         self.trade_day_start_dt = None
         self.trade_day_end_dt = None
         self.update_trade_day_dt()
+
+    async def async_init(self):
+        '''
+        init 的時候就connect 還是比較好debug其它async func，不用每次從self.run 進入
+        '''
+        await self.sio.connect(url=urljoin(os.getenv('SERVER_URL'),'ws'), socketio_path="/ws/socket.io", wait_timeout = 1)
+        await sio.emit('sub_kday')
+        # await asyncio.sleep(10)
+        # sio.emit('sub_kday')
 
     def get_tpe_exg(self):
         '''
@@ -160,7 +181,7 @@ class CrawBase(metaclass=abc.ABCMeta):
         '''
         raise NotImplementedError
 
-    def create_kday_of_cur(self):
+    async def create_kday_of_cur(self):
         '''
         * Expect to be called "after" few milisecond of exchange close.
         * 要處理sync timeing 問題
@@ -174,21 +195,44 @@ class CrawBase(metaclass=abc.ABCMeta):
         r = requests.get(url)
         df_stock_kday = pd.DataFrame.from_dict(r.json())
 
-        df_local_stocks = pd.DataFrame.from_dict(self.list_exg_stocks())
-        # print(df_local_stocks)
-        # df_listed = df_stock_kday.merge(df_local_stocks, how = 'outer' ,indicator=True).loc[lambda x : x['_merge']=='left_only']
-        # df_shimoichi=df_stock_kday.merge(df_local_stocks, how = 'outer' ,indicator=True).loc[lambda x : x['_merge']=='right_only']
-        df_join = pd.merge(left=df_stock_kday, right=df_local_stocks,
-                           how='left', left_on='Code', right_on='symbol')
+        while True:
+            df_local_stocks = pd.DataFrame.from_dict(self.list_exg_stocks())
+            # print(df_local_stocks)
+            df_outer=pd.merge(left=df_stock_kday, right=df_local_stocks,
+                            how='outer', left_on='Code', right_on='symbol',indicator=True)
+            # df_listed = df_stock_kday.merge(right=df_local_stocks, how = 'outer' ,indicator=True).loc[lambda x : x['_merge']=='left_only'] #上市
+            df_listed=df_outer.loc[lambda x : x['_merge']=='left_only'] #上市
+            # df_shimoichi=df_stock_kday.merge(df_local_stocks, how = 'outer' ,indicator=True).loc[lambda x : x['_merge']=='right_only'] #下市
+            df_shimoichi=df_outer.loc[lambda x : x['_merge']=='right_only']
+            if not df_listed.empty:
+                print(df_listed)
+                self.add_tpe_stocks()
+            else:
+                #到底要不要把下市的股票是個問題，刪掉了話，程式會運行的比較快，不會有太多例外。
+                #但是很多時候，strategy 要有辦法自己避開有問題的股票，如果給的是一定沒有下市的資料，就會bias
+                break 
+                if not df_shimoichi.empty:
+                    print(df_shimoichi)
+                else:
+                    break
+
+            # raise
+        # df_join = pd.merge(left=df_stock_kday, right=df_local_stocks,
+        #                    how='left', left_on='Code', right_on='symbol')
+        df_join = df_outer.loc[lambda x : x['_merge']=='both']
         # print(df_join.replace(r'^\s*$', None, regex=True))
         # print(df_join)
-        # raise
+        df_na = df_join[df_join[['id']].isna().any(axis=1)]
+        if not df_na.empty:
+            print(df_na)
+            raise ValueError('exist row with id is None, check your logic')
 
         r_date = datetime.strptime(
-            r.headers['last-modified'], "%a, %d %b %Y %H:%M:%S %Z").astimezone(tz=pytz.utc)  # e.g. Wed, 03 Nov 2021 21:00:42 GMT
+            r.headers['last-modified'], "%a, %d %b %Y %H:%M:%S %Z").astimezone(tz=tpe_tz)  # e.g. Wed, 03 Nov 2021 21:00:42 GMT
         # 一般來說會在utc 13:00 update (TPE 21點)
         # print(r_date)
-        r_date = r_date.replace(hour=13, minute=30, second=0)
+        r_date = r_date.replace(hour=9, minute=00, second=0) #originally, set 13:30 which is wrong.
+        
         # print(r_date)
         # raise
         '''
@@ -208,13 +252,20 @@ class CrawBase(metaclass=abc.ABCMeta):
         print(resp)
         print(resp[0].text)
         '''
+        ws_body_li=list()
+
+
+        
         for row in df_join.iterrows():
             row = row[1]
             # print(row['symbol'])
             body = {'stock_id': row['id'], 'start_ts': r_date.isoformat(), 'open': row['OpeningPrice'],
                     'high': row['HighestPrice'], 'low': row['LowestPrice'], 'close': row['ClosingPrice'],
-                    'volume': row['TradeVolume'], 'transaction': row['Transaction'], 'interval': 'day', }
-            body = {k: v for k, v in body.items() if v}
+                    'volume': row['TradeVolume'], 'transaction': row['Transaction'] }
+            ws_body_li.append(body)
+
+            body = {k: v for k, v in body.items() if v} #if value is empty, don't passit
+            body.update({'interval': 'day'})
             try:
                 response = requests.post(
                     urljoin(os.getenv('SERVER_URL'), 'kbars'), json=body)
@@ -231,6 +282,11 @@ class CrawBase(metaclass=abc.ABCMeta):
                 print(e)
             # if row['symbol']=='00684R':
             #     break
+
+        jstr = orjson.dumps(ws_body_li)
+        await self.sio.emit('pub_kday',data=jstr) #not work if connect at different event loop
+        # websocket是實際result不需要 interval
+
         return
 
     # @abc.abstractmethod
@@ -333,7 +389,7 @@ class CrawBase(metaclass=abc.ABCMeta):
             self.sched.print_jobs()
             print()
 
-    def run(self):
+    async def run(self):
         '''
         run the crawler with timer to create kmin, khour periodically.
         TODO:
@@ -345,6 +401,8 @@ class CrawBase(metaclass=abc.ABCMeta):
                 check是否已經閉市。deep call比較好
                 1.如果api 有query 限制，就必須按照限制去開subprocess
         '''
+        # loop=asyncio.get_running_loop()
+        # await self.sio.connect(url=urljoin(os.getenv('SERVER_URL'),'ws'), socketio_path="/ws/socket.io", wait_timeout = 1)
         cron_parts = Cron(self.tpe_exg['strt_cron_utc'], {
                           'output_weekday_names': True}).parts  # .schedule(reference)
 
@@ -358,9 +416,18 @@ class CrawBase(metaclass=abc.ABCMeta):
             self.trade_day_routine()  # in trade day time, fire immediately
 
         self.sched.print_jobs()
-        print()
-        while True:
-            time.sleep(60)
+        # await self.sio.emit('pub_kday',data={'test':456}) #not work if connect at different event loop
+        # print('sio:{}\n\n'.format(self.sio))
+        # print()
+        # while True:
+        #     time.sleep(60)
+        try:
+            # asyncio.get_running_loop().run_forever()
+            # await asyncio.sleep(10) #use while
+            await asyncio.Event().wait()
+            #await asyncio.Event().wait()
+        except (KeyboardInterrupt, SystemExit):
+            pass
 
 
 class BasicCraw(CrawBase):

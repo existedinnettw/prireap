@@ -30,7 +30,7 @@ def get_exchanges(db: Session = Depends(get_db), code_names: Optional[List[str]]
     "/exchanges/{exchange_id}",
     response_model=schemas.Exchange
 )
-def get_exchange_by_id(exchange_id: int, db: Session = Depends(get_db)):
+def get_exchange_by_id(exchange_id: int, db: Session = Depends(get_db)):    
     db_exg = crud.get_exchange(db, exchange_id)
     if db_exg is None:
         raise HTTPException(status_code=404, detail="exchange not found")

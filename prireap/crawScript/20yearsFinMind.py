@@ -5,7 +5,7 @@ from ..crawSrc.crawBase import BasicCraw
 from FinMind.data import DataLoader
 from dotenv import load_dotenv
 from os import getenv
-import time
+from time import sleep
 from datetime import datetime, date, timedelta, time
 from pytz import utc
 import warnings
@@ -141,7 +141,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         if datetime.now()-cycle_start_dt>=timedelta(hours=1):
             print('waiting for 300N/hr limit...')
         while datetime.now()-cycle_start_dt>=timedelta(hours=1):
-            time.sleep(1)
+            sleep(1)
         cycle_start_dt=datetime.now()
         req_counter=0
 

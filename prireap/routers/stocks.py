@@ -16,7 +16,7 @@ router = APIRouter(
 )
 def get_stocks(db: Session = Depends(get_db),
                symbols: Optional[List[str]] = Query(None),
-               exchanges: Optional[List[int]] = Query(None)):
+               exchange_ids: Optional[List[int]] = Query(None)):
     '''
     會列出所有exchange的所有stocks
     更常用的是filter by symbol
@@ -29,7 +29,7 @@ def get_stocks(db: Session = Depends(get_db),
     # else:
     #     db_stocks = crud.get_stocks(db)
     db_stocks = crud.get_stocks_by_symbols(
-        db, symbol_list=symbols, exchange_list=exchanges)
+        db, symbol_list=symbols, exchange_list=exchange_ids)
     # print('this is db stocks:',db_stocks, '\n\n\n')
     return db_stocks
 

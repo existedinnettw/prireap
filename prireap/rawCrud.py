@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 # from sqlalchemy import or_, and_
 from . import models, schemas
 from typing import List, Optional, Callable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import pandas as pd
 from sqlalchemy.dialects import postgresql
 now = datetime.now
@@ -275,6 +275,7 @@ def get_stockKDays_with_filter(db: Session, stock_ids: Optional[List[int]] = Non
         crit_in_with_check_none(models.StockKDay.stock_id.in_, stock_ids)
     )
     stmt=str(query_obj.statement.compile(compile_kwargs={"literal_binds": True}))
+    print('stmt:{}'.format(stmt))
     ts=now()
 
     cursor.execute(stmt)
@@ -338,4 +339,90 @@ def delete_kday(db: Session, kday_id: int):
     db.delete(db_kday)
     db.commit()
     return
+
+# ============================dvd_split================================
+def get_dvd_splts_with_filter(db: Session, stock_ids: Optional[List[int]] = None, start: date = None, end: date = None):
+    '''
+    range:[start,end)
+    '''
+    st_of_end = end
+    
+    con=db.connection().connection #from session back to lower level(no orm). #sqlalchemy.pool.base._ConnectionFairy
+    cursor=con.cursor()
+    print('start sqlalchemy DvdEtSplt query')
+    query_obj= db.query(models.DvdEtSplt).filter(
+        crit_in_with_check_none(models.DvdEtSplt.trade_date.__ge__, start),
+        crit_in_with_check_none(models.DvdEtSplt.trade_date.__lt__, st_of_end), #least, not least equal
+        crit_in_with_check_none(models.DvdEtSplt.stock_id.in_, stock_ids)
+    )
+    stmt=str(query_obj.statement.compile(compile_kwargs={"literal_binds": True}))
+    print('stmt:{}'.format(stmt))
+    ts=now()
+
+    cursor.execute(stmt)
+    rows = cursor.fetchall()
+    tf=now()
+    print('finish db query', tf-ts)
+
+    list_of_dicts=rows_to_dict(cursor, rows)
+    td=now()
+    print('finish to dict', td-tf)
+    return list_of_dicts
+# ============================cfs================================
+def get_cfss_with_filter(db: Session, stock_ids: Optional[List[int]] = None, start: date = None, end: date = None):
+    '''
+    range:[start,end)
+    '''
+    st_of_end = end
+    
+    con=db.connection().connection #from session back to lower level(no orm). #sqlalchemy.pool.base._ConnectionFairy
+    cursor=con.cursor()
+    print('start sqlalchemy cfs query')
+    query_obj= db.query(models.CFS).filter(
+        crit_in_with_check_none(models.CFS.date.__ge__, start),
+        crit_in_with_check_none(models.CFS.date.__lt__, st_of_end), #least, not least equal
+        crit_in_with_check_none(models.CFS.stock_id.in_, stock_ids)
+    )
+    stmt=str(query_obj.statement.compile(compile_kwargs={"literal_binds": True}))
+    print('stmt:{}'.format(stmt))
+    ts=now()
+
+    cursor.execute(stmt)
+    rows = cursor.fetchall()
+    tf=now()
+    print('finish db query', tf-ts)
+
+    list_of_dicts=rows_to_dict(cursor, rows)
+    td=now()
+    print('finish to dict', td-tf)
+    return list_of_dicts
+
+# ============================cash flow================================
+def get_cash_flow_with_filter(db: Session, stock_ids: Optional[List[int]] = None, start: date = None, end: date = None):
+    '''
+    range:[start,end)
+    '''
+    st_of_end = end
+    
+    con=db.connection().connection #from session back to lower level(no orm). #sqlalchemy.pool.base._ConnectionFairy
+    cursor=con.cursor()
+    print('start sqlalchemy cfs query')
+    query_obj= db.query(models.CashFlow).filter(
+        crit_in_with_check_none(models.CashFlow.date.__ge__, start),
+        crit_in_with_check_none(models.CashFlow.date.__lt__, st_of_end), #least, not least equal
+        crit_in_with_check_none(models.CashFlow.stock_id.in_, stock_ids)
+    )
+    stmt=str(query_obj.statement.compile(compile_kwargs={"literal_binds": True}))
+    print('stmt:{}'.format(stmt))
+    ts=now()
+
+    cursor.execute(stmt)
+    rows = cursor.fetchall()
+    tf=now()
+    print('finish db query', tf-ts)
+
+    list_of_dicts=rows_to_dict(cursor, rows)
+    td=now()
+    print('finish to dict', td-tf)
+    return list_of_dicts
 
