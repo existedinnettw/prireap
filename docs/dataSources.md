@@ -233,7 +233,11 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
     * https://www.twse.com.tw/exchangeReport/BWIBBU_d?response=json&date=&selectType=&_=1648937827862
     * https://www.twse.com.tw/exchangeReport/BWIBBU?response=json&date=20220301&stockNo=2330&_=1648938078221
 
-  * 
+* 大部份拿到的數值都不是希望直接用的，而是拿到一些比例指標e.g. ROE。但其實可以直接查到
+
+  * [財務分析資料](https://mops.twse.com.tw/mops/web/t05st22#)
+    * roe, roa, profit margin...
+
 
 
 ## 綜合損益表 (CFS)
@@ -302,6 +306,7 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
 
 ## ~~資產負債表~~
 
+* 股東權益也稱做 「淨值 」出現在[資產負債表](https://www.cmoney.tw/learn/course/0520/topic/687)中，算roe之類的都要它
 * AccountsPayable 應付帳款
 * AccountsPayable_per
 * AccountsPayableToRelatedParties 應付帳款－關係人
@@ -414,11 +419,12 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
 * ReceivableIncrease 應收帳款（增加）減少
 * RedemptionOfBonds 償還公司債
 * RentalPrincipalRepayments 租賃本金償還
+* RepaymentOfLongTermDebt  償還長期借款
 * TotalIncomeLossItems 收益費損項目合計
 * UnrealizedGain 未實現銷貨利益（損失）
 * 每季一次
 
-## 月營收表
+## ~~月營收表~~
 
 * stock_id
 * start_d 開始時間
@@ -436,6 +442,8 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
 * id
 * stock_id
 * trade_date 交易日
+  * 交易日前一天買進才有股利，交易日當天買進已經是除息參考價了
+
 * interval_annual_ratio:int
   * 季:4、半年:2、year:1
 * dividends
@@ -457,6 +465,28 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
 * 個股的可以用stock 開頭，整體市場的可以用market(mrkt)開頭
 
 ## 集保戶股權分散表(股權持股分級表)
+
+* 每週一次，週五
+* 來源
+  * [集保戶股權分散表](https://www.tdcc.com.tw/portal/zh/smWeb/qryStock)
+    * payload 有synchronous token, by csrf，很難破，要動態的，而且每次都換token，token 不是放在header，而是body
+    * [ 数据抓取之反爬虫规则：CSRF防御处理及异步请求处理_eniluzt的博客-程序员ITS203_csrf 爬虫 ](https://www.its203.com/article/mooyinn/50339173)
+    * 但是可以爬任意時間的資料
+  * [股權分散表](https://mops.twse.com.tw/mops/web/t16sn02)
+  * [/v1/opendata/1-5](https://openapi.tdcc.com.tw/tdcc-opendata-api-docs)
+* id
+* stock_id
+* date
+* l1_nper
+  * 以下的存法是把原本2d table 拆成1d row
+    * 現在每支股票的級距都是相等的，且假設未來的分級級距也不會變化，所以不寫分級距。
+    * 把人數、股數、x 15個級距=30 個column
+  * ratio 也不用，算出total 後，股數除total 就知道了
+* l1_n
+* ...
+* diff_n
+  * 差異數調整
+  * total 的部份就不用了，只是把前面15級全部column sum 起來
 
 ## 個股融資融劵表
 

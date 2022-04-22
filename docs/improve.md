@@ -92,6 +92,17 @@ parallel query  在純sql下，還是10s(4 workers)，沒提升。
 
 # spark
 
+主要重點是可以平行處理數據，對於stock 資料來說用處不是很大
+
+# log
+
+* 一開始的server 方向選錯了，如果每個人都有local的server，那沒有什麼必要透過api去取資料，直接透過sql server就好。
+  * 可能想說多一層沒差，其實差很多，1.api server的本身需要製作和維護，2.sql得到的資料要一直轉換各種型別，中間很容易有NA，會error，且型別並非統一管理，增加維護修改的難度。最重要的點 3.多一層api server，性能的損失是很多的，不滑算。
+  * 完全只需要crud就夠了
+* 
+
+
+
 
 
 

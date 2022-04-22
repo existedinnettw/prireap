@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from fastapi.responses import JSONResponse, Response
 from .. import schemas, crud, models
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Union
 from ..dependencies import get_db
 from typing import List, Optional
 import orjson
@@ -31,8 +31,8 @@ router = APIRouter(
         'stock_ids':[1,2]"""
 )
 def get_cfss(
-        from_d: Optional[datetime] = Query(None),
-        to_d: Optional[datetime] = Query(None),
+        from_d: Optional[Union[datetime,date]] = Query(None),
+        to_d: Optional[Union[datetime,date]] = Query(None),
         stock_ids: List[Optional[int]] = Query(None),
         db: Session = Depends(get_db)):
     '''

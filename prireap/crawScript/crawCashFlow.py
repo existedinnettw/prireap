@@ -30,7 +30,7 @@ if start_date == None:
 
 # it's possible already get some stocks, to skip them, indicate stock_li
 stock_skip_li = []  # ['2330','0050']
-stock_start_id = 599  # 2 #489
+stock_start_id = 612  # 2 #489
 timeout = 10
 # API_HR_LIMIT = 300
 
@@ -55,7 +55,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         # api.login(user_id='user_id',password='password')
         # print(start_date.isoformat())
         try:
-            df = api.taiwan_stock_financial_statement(
+            df = api.taiwan_stock_cash_flows_statement(
                 stock_id=symbol,
                 start_date=start_date.isoformat(),
                 end_date=end_date.isoformat(),
@@ -78,48 +78,50 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
             continue
 
         # -->modify to suit for table column
-        # print(df)
+        # print(df.head)
         # print(df[['type','origin_name']].drop_duplicates(keep='last').sort_values(by=['type','origin_name'])) #show unique name
-        df = df[df['type'] != '-']
+        # raise
+        # df = df[df['type'] != '-']
         cols = sorted(list(df['type'].unique()))
         # print('\n')
         # print('\n'.join(cols))
         # print(len(cols), '\n')
         # raise
-        df = df.replace({
-            'CumulativeEffectOfChanges': 'CumulativeEffectOfChangesInAccountingPrinciple',
-            'IncomeAfterTax': 'IncomeAfterTaxes',
-        })
+        # df = df.replace({
+        #     'CumulativeEffectOfChanges': 'CumulativeEffectOfChangesInAccountingPrinciple',
+        #     'IncomeAfterTax': 'IncomeAfterTaxes',
+        # })
         map = {
-            'AdjustmentItem': 'adjustment_item',
-            'CostOfGoodsSold': 'cost_of_goods_sold',
-            'CumulativeEffectOfChangesInAccountingPrinciple': 'cumulative_effect_of_changes_in_accounting_principle',
-            'EPS': 'eps',
-            'EquityAttributableToOwnersOfParent': 'equity_attributable_to_owners_of_parent',
-            'ExtraordinaryItems': 'extraordinary_items',
-            'GrossProfit': 'gross_profit',
-            'IncomeAfterTaxes': 'income_after_taxes',
-            'IncomeBeforeIncomeTax': 'income_before_income_tax',
-            'IncomeBeforeTaxFromContinuingOperations': 'income_before_tax_from_continuing_operations',
-            'IncomeFromContinuingOperations': 'income_from_continuing_operations',
-            'IncomeLossFromDiscontinuedOperation': 'income_loss_from_discontinued_operation',
-            'NetIncome': 'net_income',
-            'NoncontrollingInterests': 'noncontrolling_interests',
-            'OperatingExpenses': 'operating_expenses',
-            'OperatingIncome': 'operating_income',
-            'OtherComprehensiveIncome': 'other_comprehensive_income',
-            'OTHNOE': 'other_nonoperating_expense_or_loss',
-            'PreTaxIncome': 'pre_tax_income',
+            'AccountsPayable': 'accounts_payable',
+            'AmortizationExpense': 'amortization_expense',
+            'AmountDueToRelatedParties': 'amount_due_to_related_parties',
+            'CashBalancesBeginningOfPeriod': 'cash_balances_beginning_of_period',
+            'CashBalancesEndOfPeriod': 'cash_balances_end_of_period',
+            'CashBalancesIncrease': 'cash_balances_increase',
+            'CashFlowsFromOperatingActivities': 'cash_flows_from_operating_activities',
+            'CashFlowsProvidedFromFinancingActivities': 'cash_flows_provided_from_financing_activities',
+            'CashProvidedByInvestingActivities': 'cash_provided_by_investing_activities',
+            'CashReceivedThroughOperations': 'cash_received_through_operations',
+            'DecreaseInDepositDeposit': 'decrease_in_deposit_deposit',
+            'DecreaseInShortTermLoans': 'decrease_in_short_term_loans',
+            'Depreciation': 'depreciation',
+            'HedgingFinancialLiabilities': 'hedging_financial_liabilities',
+            'IncomeBeforeIncomeTaxFromContinuingOperations': 'income_before_income_tax_from_continuing_operations',
+            'InterestExpense': 'interest_expense',
+            'InterestIncome': 'interest_income',
+            'InventoryIncrease': 'inventory_increase',
+            'NetIncomeBeforeTax': 'net_income_before_tax',
+            'OtherNonCurrentLiabilitiesIncrease': 'other_non_current_liabilities_increase',
+            'PayTheInterest': 'pay_the_interest',
+            'ProceedsFromLongTermDebt': 'proceeds_from_long_term_debt',
+            'PropertyAndPlantAndEquipment': 'property_and_plant_and_equipment',
             'RealizedGain': 'realized_gain',
-            'RealizedGainFromInterAffiliateAccounts': 'realized_gain_from_inter_affiliate_accounts',
-            'Revenue': 'revenue',
-            'TAX': 'tax',
-            'TotalConsolidatedProfitForThePeriod': 'total_consolidated_profit_for_the_period',
-            'TotalNonbusinessIncome': 'total_nonbusiness_income',
-            'TotalNonoperatingIncomeAndExpense': 'total_nonoperating_income_and_expense',
-            'TotalnonbusinessExpenditure': 'total_nonbusiness_expenditure',
+            'ReceivableIncrease': 'receivable_increase',
+            'RedemptionOfBonds': 'redemption_of_bonds',
+            'RentalPrincipalRepayments': 'rental_principal_repayments',
+            'RepaymentOfLongTermDebt': 'repayment_of_long_term_debt',
+            'TotalIncomeLossItems': 'total_income_loss_items',
             'UnrealizedGain': 'unrealized_gain',
-            'UnrealizedGainFromInterAffiliateAccounts': 'unrealized_gain_from_inter_affiliate_accounts',
         }
         df = df.replace(map)
         cols=list(map.values())
@@ -135,6 +137,9 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
             # print(row)
             # print(type(row))
             col=row['type']
+            # if 'unrealized_gain' in col:
+            #     print(row['value'])
+            #     raise
             d=pd.to_datetime(row['date'])
             # print(d,col,row['value'])
             temp_new_df.at[d,col]=row['value'] #same as df[col][d]
@@ -147,20 +152,21 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         new_df['stock_id'] = stock_id
         new_df = new_df.fillna('')
         # print(new_df, )
+        # print(new_df.head())
         # print(new_df.max())
         # print(new_df.min())
         # raise
 
         #--> create dict for create request.
         body = new_df.to_dict(orient="records")
-        body = [{k: v for k, v in el.items() if v} for el in body]
+        body = [{k: v for k, v in el.items() if v!=None} for el in body]
         # body = [body[0]]
         # print(body[0])
         # raise
         try:
             print('upload to local...')
             response = requests.post(
-                urljoin(getenv('SERVER_URL'), 'composite/cfs/'), json=body, timeout=timeout)
+                urljoin(getenv('SERVER_URL'), 'composite/cash_flow/'), json=body, timeout=timeout)
             response.raise_for_status()
             # print('sucess to add new {} (stock_id:{}) kday to local server.'.format( stock['symbol'], stock['id']))
         except requests.exceptions.HTTPError as e:  # e.g. 400, 401, 404...
@@ -172,6 +178,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         except Exception as e:
             print(e)
         # raise
+        sleep(2)
     else:
         print('passed')
 

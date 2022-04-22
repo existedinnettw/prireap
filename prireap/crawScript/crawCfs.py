@@ -156,7 +156,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
 
         #--> create dict for create request.
         body = new_df.to_dict(orient="records")
-        body = [{k: v for k, v in el.items() if v} for el in body]
+        body = [{k: v for k, v in el.items() if v!=None} for el in body]
         # body = [body[0]]
         # print(body[0])
         # raise

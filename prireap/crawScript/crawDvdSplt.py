@@ -11,7 +11,6 @@ from pytz import utc
 import warnings
 from urllib.parse import urljoin
 import json
-import requests
 from bs4 import BeautifulSoup
 import re
 from fake_useragent import UserAgent
@@ -192,7 +191,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         df = df.drop(columns=['year','share_sum_dvd','ref_price'])
 
         body = df.to_dict(orient="records")
-        body = [{k: v for k, v in el.items() if v} for el in body]
+        body = [{k: v for k, v in el.items() if v!=None} for el in body]
         # print(body[0])
         # raise
         try:

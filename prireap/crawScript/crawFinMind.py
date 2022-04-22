@@ -112,7 +112,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
 
         # # sing req ver
         body=df.to_dict(orient="records")
-        body = [{k: v for k, v in el.items() if v} for el in body]
+        body = [{k: v for k, v in el.items() if v!=None} for el in body]
         # print(body)
         # raise
         try:

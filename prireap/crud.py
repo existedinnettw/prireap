@@ -376,3 +376,31 @@ def create_cash_flows(db: Session, objs: List[schemas.CashFlowCreate]):
     [db.refresh(i) for i in db_objs]
     # rst=db.refresh(db_stockKBars)
     return db_objs
+
+#==================================eqty_disp========================================
+def get_eqty_disp_by_stock_and_date(db:Session, stock_id:int, date:date):
+    return db.query(models.EqtyDispersion).filter(models.EqtyDispersion.stock_id == stock_id, models.EqtyDispersion.date == date).first()
+
+def create_eqty_disp(db:Session, obj: schemas.EqtyDisp):
+    db_obj = models.EqtyDispersion(**obj.dict())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+def list_eqty_disp_dupli(db: Session, objs: List[schemas.EqtyDispCreate]):
+    dupli_kdays=[]
+    for i in objs:
+        db_kbar=get_eqty_disp_by_stock_and_date(db=db, stock_id=i.stock_id, date=i.date) #too slow
+        if db_kbar:
+            dupli_kdays.append({'stock_id':i.stock_id,'start_ts':i.date})
+        # print('fin one check')
+    return dupli_kdays
+            
+def create_eqty_disps(db: Session, objs: List[schemas.EqtyDispCreate]):
+    db_objs = [models.EqtyDispersion(**i.dict()) for i in objs]
+    db.add_all(db_objs)  # this use for loop of add
+    db.commit()
+    [db.refresh(i) for i in db_objs]
+    # rst=db.refresh(db_stockKBars)
+    return db_objs

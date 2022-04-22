@@ -426,3 +426,32 @@ def get_cash_flow_with_filter(db: Session, stock_ids: Optional[List[int]] = None
     print('finish to dict', td-tf)
     return list_of_dicts
 
+# ============================eqty disp================================
+
+def get_eqty_disps_with_filter(db: Session, stock_ids: Optional[List[int]] = None, start: date = None, end: date = None):
+    '''
+    range:[start,end)
+    '''
+    st_of_end = end
+    
+    con=db.connection().connection #from session back to lower level(no orm). #sqlalchemy.pool.base._ConnectionFairy
+    cursor=con.cursor()
+    print('start sqlalchemy cfs query')
+    query_obj= db.query(models.EqtyDispersion).filter(
+        crit_in_with_check_none(models.EqtyDispersion.date.__ge__, start),
+        crit_in_with_check_none(models.EqtyDispersion.date.__lt__, st_of_end), #least, not least equal
+        crit_in_with_check_none(models.EqtyDispersion.stock_id.in_, stock_ids)
+    )
+    stmt=str(query_obj.statement.compile(compile_kwargs={"literal_binds": True}))
+    print('stmt:{}'.format(stmt))
+    ts=now()
+
+    cursor.execute(stmt)
+    rows = cursor.fetchall()
+    tf=now()
+    print('finish db query', tf-ts)
+
+    list_of_dicts=rows_to_dict(cursor, rows)
+    td=now()
+    print('finish to dict', td-tf)
+    return list_of_dicts

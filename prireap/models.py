@@ -1,6 +1,7 @@
 # import asyncio
 from email.policy import default
 import os
+from tabnanny import verbose
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from pytz import timezone
@@ -127,7 +128,7 @@ class CFS(Base):
     id = Column(Integer, Sequence('cfs_id_seq'), primary_key=True)
     stock_id = Column(Integer, ForeignKey(
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
-    date=Column(Date,nullable=False) #date 不支援 timezone
+    date=Column(Date,nullable=False) #date 不支援 timezoneq
 
     adjustment_item=Column(BigInteger, nullable=True) #調整項目
     cost_of_goods_sold=Column(BigInteger, nullable=True) #營業成本
@@ -170,7 +171,6 @@ class CashFlow(Base):
         'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     date=Column(Date,nullable=False) #date 不支援 timezone
 
-    adjustment_item=Column(BigInteger, nullable=True) #調整項目
     accounts_payable=Column(BigInteger, nullable=True) #應付帳款增加(減少)
     amortization_expense=Column(BigInteger, nullable=True) #攤銷費用
     amount_due_to_related_parties=Column(BigInteger, nullable=True) #應付帳款-關係人增加(減少)
@@ -198,6 +198,7 @@ class CashFlow(Base):
     receivable_increase=Column(BigInteger, nullable=True) #應收帳款（增加）減少
     redemption_of_bonds=Column(BigInteger, nullable=True) #償還公司債
     rental_principal_repayments=Column(BigInteger, nullable=True) #租賃本金償還
+    repayment_of_long_term_debt=Column(BigInteger, nullable=True)  #償還長期借款
     total_income_loss_items=Column(BigInteger, nullable=True) #收益費損項目合計
     unrealized_gain=Column(BigInteger, nullable=True) #未實現銷貨利益（損失）
     UniqueConstraint('stock_id', 'date', name='uq_cf_stk_d')
@@ -216,10 +217,47 @@ class DvdEtSplt(Base):
     stock_split=Column(Float, nullable=True)
     UniqueConstraint('stock_id', 'trade_date', name='uq_dvds_stk_d')
 
-# class EqtyDispersion(Base):
-#     '''
-#     集保戶股權分散表(股權持股分級表)
-#     '''
+class EqtyDispersion(Base):
+    '''
+    集保戶股權分散表(股權持股分級表)
+    '''
+    __tablename__='eqty_disp_stat'
+    id = Column(Integer, Sequence('eqty_disp_id_seq'), primary_key=True)
+    stock_id = Column(Integer, ForeignKey(
+        'stock.id', onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    date=Column(Date,nullable=False) #date 不支援 timezone
+    l1_nper = Column(Integer)
+    l1_n = Column(BigInteger)
+    l2_nper = Column(Integer)
+    l2_n = Column(BigInteger)
+    l3_nper = Column(Integer)
+    l3_n = Column(BigInteger)
+    l4_nper = Column(Integer)
+    l4_n = Column(BigInteger)
+    l5_nper = Column(Integer)
+    l5_n = Column(BigInteger)
+    l6_nper = Column(Integer)
+    l6_n = Column(BigInteger)
+    l7_nper = Column(Integer)
+    l7_n = Column(BigInteger)
+    l8_nper = Column(Integer)
+    l8_n = Column(BigInteger)
+    l9_nper = Column(Integer)
+    l9_n = Column(BigInteger)
+    l10_nper = Column(Integer)
+    l10_n = Column(BigInteger)
+    l11_nper = Column(Integer)
+    l11_n = Column(BigInteger)
+    l12_nper = Column(Integer)
+    l12_n = Column(BigInteger)
+    l13_nper = Column(Integer)
+    l13_n = Column(BigInteger)
+    l14_nper = Column(Integer)
+    l14_n = Column(BigInteger)
+    l15_nper = Column(Integer)
+    l15_n = Column(BigInteger)
+    diff_n = Column(BigInteger)
+    
 # class StockMrgShrt(Base):
 #     '''
 #     個股融資融劵表
@@ -244,19 +282,19 @@ if __name__ == '__main__':
     Base.metadata.create_all(bind=engine, checkfirst=True)  # create table
 
 
-    with SessionLocal() as session:
-        # insert
-        session.add(Exchange(name='台灣證券交易所', code_name='TPE'))
-        session.add(Stock(exchange_id=1, symbol='2330', name='台積電'))
-        session.commit()
+    # with SessionLocal() as session:
+    #     # insert
+    #     session.add(Exchange(name='台灣證券交易所', code_name='TPE'))
+    #     session.add(Stock(exchange_id=1, symbol='2330', name='台積電'))
+    #     session.commit()
 
-        rows = session.query(Exchange)
-        # row=rows[0]
-        # print(row.fee ,row.loan)
-        print(rows)
+    #     rows = session.query(Exchange)
+    #     # row=rows[0]
+    #     # print(row.fee ,row.loan)
+    #     print(rows)
 
-        for row in rows:
-            print(row.id, row.name, row.code_name)
+    #     for row in rows:
+    #         print(row.id, row.name, row.code_name)
             # print(row.product_id, row.deal_dt, row.price, row.qty, row.trade_type, row.total_price)
 
         # #kbar test

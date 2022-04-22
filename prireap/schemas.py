@@ -25,8 +25,8 @@ class StockKBarBase(BaseModel):
     volume: Optional[int] = None
 
     transaction: Optional[int] = None
-    dividends: Optional[int] = None
-    stock_splits: Optional[int] = None
+    # dividends: Optional[int] = None
+    # stock_splits: Optional[int] = None
 
     class Config:
         orm_mode = True
@@ -155,7 +155,6 @@ class CashFlowCreate(BaseModel):
     stock_id: int
     date: datetime.date  # date 不支援 timezone
 
-    adjustment_item: Optional[int] = None  # 調整項目
     accounts_payable: Optional[int] = None  # 應付帳款增加(減少)
     amortization_expense: Optional[int] = None  # 攤銷費用
     amount_due_to_related_parties: Optional[int] = None  # 應付帳款-關係人增加(減少)
@@ -163,16 +162,14 @@ class CashFlowCreate(BaseModel):
     cash_balances_end_of_period: Optional[int] = None  # 期末現金及約當現金餘額
     cash_balances_increase: Optional[int] = None  # 本期現金及約當現金增加（減少）數
     cash_flows_from_operating_activities: Optional[int] = None  # 營業活動之淨現金流入(流出)
-    # 籌資活動之淨現金流入（流出）
-    cash_flows_provided_from_financing_activities: Optional[int] = None
+    cash_flows_provided_from_financing_activities: Optional[int] = None # 籌資活動之淨現金流入（流出）
     cash_provided_by_investing_activities: Optional[int] = None  # 投資活動之淨現金流入（流出）
     cash_received_through_operations: Optional[int] = None  # 營運產生之現金流入（流出）
     decrease_in_deposit_deposit: Optional[int] = None  # 存出保證金減少
     decrease_in_short_term_loans: Optional[int] = None  # 短期借款減少
     depreciation: Optional[int] = None  # 折舊費用
     hedging_financial_liabilities: Optional[int] = None  # 除列避險之金融負債
-    # 繼續營業單位稅前淨利（淨損）
-    income_before_income_tax_from_continuing_operations: Optional[int] = None
+    income_before_income_tax_from_continuing_operations: Optional[int] = None # 繼續營業單位稅前淨利（淨損）
     interest_expense: Optional[int] = None  # 利息費用
     interest_income: Optional[int] = None  # 利息收入
     inventory_increase: Optional[int] = None  # 存貨（增加）減少
@@ -185,6 +182,7 @@ class CashFlowCreate(BaseModel):
     receivable_increase: Optional[int] = None  # 應收帳款（增加）減少
     redemption_of_bonds: Optional[int] = None  # 償還公司債
     rental_principal_repayments: Optional[int] = None  # 租賃本金償還
+    repayment_of_long_term_debt: Optional[int] = None  #償還長期借款
     total_income_loss_items: Optional[int] = None  # 收益費損項目合計
     unrealized_gain: Optional[int] = None  # 未實現銷貨利益（損失）
 
@@ -194,3 +192,45 @@ class CashFlowCreate(BaseModel):
 
 class CashFlow(CashFlowCreate):
     id: int
+
+
+class EqtyDispCreate(BaseModel):
+    stock_id: int
+    date: datetime.date  # date 不支援 timezone
+    l1_nper : Optional[int]=None
+    l1_n: Optional[int]=None
+    l2_nper : Optional[int]=None
+    l2_n: Optional[int]=None
+    l3_nper : Optional[int]=None
+    l3_n: Optional[int]=None
+    l4_nper : Optional[int]=None
+    l4_n: Optional[int]=None
+    l5_nper : Optional[int]=None
+    l5_n: Optional[int]=None
+    l6_nper : Optional[int]=None
+    l6_n: Optional[int]=None
+    l7_nper : Optional[int]=None
+    l7_n: Optional[int]=None
+    l8_nper : Optional[int]=None
+    l8_n: Optional[int]=None
+    l9_nper : Optional[int]=None
+    l9_n: Optional[int]=None
+    l10_nper : Optional[int]=None
+    l10_n: Optional[int]=None
+    l11_nper : Optional[int]=None
+    l11_n: Optional[int]=None
+    l12_nper : Optional[int]=None
+    l12_n: Optional[int]=None
+    l13_nper : Optional[int]=None
+    l13_n: Optional[int]=None
+    l14_nper : Optional[int]=None
+    l14_n: Optional[int]=None
+    l15_nper : Optional[int]=None
+    l15_n: Optional[int]=None
+    diff_n: Optional[int]=None
+
+    class Config:
+        orm_mode = True
+
+class EqtyDisp(EqtyDispCreate):
+    id:int

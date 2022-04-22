@@ -1,3 +1,4 @@
+from operator import eq
 import uvicorn
 # --------------
 from typing import List
@@ -9,7 +10,7 @@ from . import schemas, crud, models
 from .database import SessionLocal, engine
 from typing import List, Optional
 import datetime
-from .routers import exchanges, stocks, stockKBars, dvdSplt, cfs, cash_flow
+from .routers import exchanges, stocks, stockKBars, dvdSplt, cfs, cash_flow, eqtyDisp
 # from fastapi_socketio import SocketManager
 from .socket_handlers import sio
 
@@ -26,6 +27,7 @@ app.include_router(stockKBars.router)
 app.include_router(dvdSplt.router)
 app.include_router(cfs.router)
 app.include_router(cash_flow.router)
+app.include_router(eqtyDisp.router)
 
 
 # ==========================================================================
