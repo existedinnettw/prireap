@@ -13,6 +13,7 @@ import warnings
 from urllib.parse import urljoin
 import json
 import subprocess
+import numpy as np
 
 '''
 最後執行日期4/4
@@ -30,7 +31,7 @@ if start_date == None:
 
 # it's possible already get some stocks, to skip them, indicate stock_li
 stock_skip_li = []  # ['2330','0050']
-stock_start_id = 599  # 2 #489
+stock_start_id = 596  # 2 #489
 timeout = 10
 # API_HR_LIMIT = 300
 
@@ -54,24 +55,27 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         # api.login_by_token(api_token=token)
         # api.login(user_id='user_id',password='password')
         # print(start_date.isoformat())
-        try:
-            df = api.taiwan_stock_financial_statement(
-                stock_id=symbol,
-                start_date=start_date.isoformat(),
-                end_date=end_date.isoformat(),
-                timeout=timeout
-            )
-        except Exception as e:
-            msg=e.args[0]
-            # print(e.args)
-            # print(e.__context__)
-            # print(type(msg))
-            if "Requests reach the upper limit" in msg:
-                print("block by server, redial...")
-                subprocess.call([r'C:\Users\exist\Desktop\redial.bat'])
-                sleep(10)
-            else:
-                raise Exception('unkown error')
+        while True:
+            try:
+                df = api.taiwan_stock_financial_statement(
+                    stock_id=symbol,
+                    start_date=start_date.isoformat(),
+                    end_date=end_date.isoformat(),
+                    timeout=timeout
+                )
+            except Exception as e:
+                msg=e.args[0]
+                # print(e.args)
+                # print(e.__context__)
+                # print(type(msg))
+                if "Requests reach the upper limit" in msg:
+                    print("block by server, redial...")
+                    subprocess.call([r'C:\Users\exist\Desktop\redial.bat'])
+                    sleep(10)
+                    continue
+                else:
+                    raise Exception('unkown error')
+            break
         # req_counter += 1
 
         if not df.shape[0]:
@@ -148,7 +152,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         temp_new_df['date']=new_df['date']
         new_df=temp_new_df
         new_df['stock_id'] = stock_id
-        new_df = new_df.fillna('')
+        new_df = new_df.replace({np.nan: None}).fillna('')
         # print(new_df, )
         # print(new_df.max())
         # print(new_df.min())
@@ -174,6 +178,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
             raise Exception('local server error, plz fix.')
         except Exception as e:
             print(e)
+            raise Exception('unkown error, plz fix.')
         # raise
     else:
         print('passed')

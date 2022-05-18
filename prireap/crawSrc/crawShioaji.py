@@ -5,7 +5,9 @@ from dotenv import load_dotenv
 import os
 
 '''
-already dead https://github.com/Sinotrade/Shioaji
+github already dead https://github.com/Sinotrade/Shioaji
+transfer to fb
+this file not yet implemented
 '''
 
 load_dotenv()

@@ -76,14 +76,14 @@ def create_dvd_splts(dvd_splt_creates: List[schemas.DvdEtSpltCreate], db: Sessio
                 status_code=404, detail="stock not exist, create stock first")
 
     # 要確定pass in 的本身有無重複，其中start_ts是datetime
-    print('check repeat in request body')
+    # print('check repeat in request body')
     create_simp = [str(i.stock_id)+i.trade_date.isoformat()
                    for i in dvd_splt_creates]
     if len(dvd_splt_creates) != len(set(create_simp)):
         raise HTTPException(
             status_code=400, detail="duplicate in request list.")
 
-    print('list duplicate in db')  # this process stuck
+    # print('list duplicate in db')  # this process stuck
     dupli_kdays = crud.list_dvd_split_dupli(db=db, dvd_splits=dvd_splt_creates)
     if dupli_kdays:
         # 要不要直接create沒有重複的？

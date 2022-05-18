@@ -4,6 +4,12 @@
 
 最重要的就是確立原始資料是什麼樣子，因為之後的衍生的資料將會千變萬化
 
+
+
+[TOC]
+
+
+
 # overview
 
 * [用 Python 打造自己的股市資料庫 — 美股篇](https://medium.com/ai%E8%82%A1%E4%BB%94/%E7%94%A8-python-%E6%89%93%E9%80%A0%E8%87%AA%E5%B7%B1%E7%9A%84%E8%82%A1%E5%B8%82%E8%B3%87%E6%96%99%E5%BA%AB-%E7%BE%8E%E8%82%A1%E7%AF%87-e3e896659fd6)
@@ -101,8 +107,11 @@
   * **close**
   * **volume**
     * 成交量（股數）
+    * TradeVolume
   * ~~trading money, trade value~~
     * 成交金額，有時候是寫amount。volume\* close 約等於，但每一筆成交價不同所以還是會差一點
+    * TradeValue
+    * 目前沒記錄
   * n_deals, transaction,  Trading_turnover
     * 成交筆數, 幾筆交易
 * ~~dividends~~
@@ -110,8 +119,46 @@
 * ~~stock_splits~~
   * 股票分割, 除權
 * stock_splits和dividends很糾結，這兩個對simulation 是必要的，
-  * 
+* [臺灣證券交易所 OpenAPI](https://openapi.twse.com.tw/v1/swagger.json)
+  * [盤後資訊 > 個股日成交資訊](https://data.gov.tw/dataset/11549)
+    * https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL
+      * 2pm 以前就會update，看看有沒有更早的記錄(1:35)
+    * https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL
+      * 兩者得出的東西是不一樣的，openapi的會delay一天，不建議使用
+    
+  * [上櫃股票行情](https://data.gov.tw/dataset/11370)
 
+
+> ```python
+>     '''
+>     在2022-05-11 02:21:00+08:00 查的結果
+>     注意firefox 可能會cache data 導致下載錯。還有swagger doc 裡的資料莫名會下載到之前的
+>     ---
+>     content-disposition: attachment;filename=STOCK_DAY_ALL.json
+>     content-encoding: gzip
+>     content-type: application/json
+>     date: Tue, 10 May 2022 18:14:53 GMT #理論上Date 標頭的值是傳送當下的日期與時間。實測這個值query下是不變的，可能是因為cache
+>     etag: W/"627980fc-3c495" 
+>     last-modified: Mon, 09 May 2022 21:00:44 GMT #理論上是包含源头服务器认定的资源做出修改的日期及时间。
+>     server: nginx 
+>     -------
+>     翻成+8 時區
+>     date:          2022-05-11 02:14:53+08:00
+>     last-modified: 2022-05-10 05:00:44+08:00
+>     ----
+>     實測此時的資料是台北時間 5/09 的股市資料。綜合以上，server 更新時間是早上5點，更新前一天的資料
+>     '''
+>             r_date = datetime.strptime(
+>             r.headers['last-modified'], "%a, %d %b %Y %H:%M:%S %Z").replace(tzinfo=pytz.utc)  # 沒有拿到GMT
+>         # print(r_date)
+>         r_date = r_date.astimezone(tz=tpe_tz)
+>         # 一般來說會在utc 13:00 update (TPE 21點)
+>         # print(r_date)
+>         # raise
+>         # 改成股票開市時間
+>         r_date = r_date.replace(hour=9, minute=0, second=0) - \
+>             timedelta(days=1)  # file implied date
+> ```
 
 
 
@@ -242,10 +289,24 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
 
 ## 綜合損益表 (CFS)
 
-* finmind 裡以前和現在的資料column有不一樣的，不太確定為什麼？反正先都打上
+* [finmind]() 裡以前和現在的資料column有不一樣的，不太確定為什麼？反正先都打上
 * [臺灣經濟新報財務資料庫](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwix64OApvj2AhWPyosBHaYrCmgQFnoECAMQAQ&url=https%3A%2F%2Fwww.tej.com.tw%2Fwebtej%2Fplus%2Fwim4.htm&usg=AOvVaw3kZwqAe3sbN4hVOghqSJ5M)
   * 列表詳細
-
+* [公開資料觀測站 案例文件整批下載](https://mops.twse.com.tw/mops/web/t203sb02)
+  * 一次下載全部
+    * 可以查過去的資料
+    * 含很多css，檔案很大，下載很慢，還要解壓縮
+  * 會有delay，比如tsmc的網站4/14就公佈財報，今5/10還沒有全就上架。
+  * 基本上所有的資料含finmind 都是來自這裡
+    * 而且是沒有齊全之前就update
+    * 這會造成，設定的query時間沒有拿到全部資料，因為資料上架的時間不固定且delay，不知道少了那些資料
+  * [上市公司綜合損益表(一般業) | 政府資料開放平臺](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi15IL0hNP3AhUDQ_UHHVzWAYsQFnoECBgQAQ&url=https%3A%2F%2Fdata.gov.tw%2Fdataset%2F91998&usg=AOvVaw1FkeIKLvj8RlLfJBWD4Xy6)
+    * /opendata/t187ap06_L_ci
+    * 可參考項目
+    * 會把每一季合併，很鬧事
+    * 不得以要使用了話，建議每天query，和資料庫裡的data比較。
+* [【基本面】財報何時公布？去哪查？](https://brain168.com/stock/basic/blog-post_31-2/)
+  * q1 5/15, q2 8/14, q3 11/14, q4 3/31
 * id
 * stock_id
 * date
@@ -255,18 +316,15 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
   * CumulativeEffectOfChanges 累積影響數
 
     * 應該是一樣的
-
 * **EPS** 每股稅後盈餘(元)
   * 本益比
 * EquityAttributableToOwnersOfParent 綜合損益總額歸屬於母公司業主
 * ExtraordinaryItems 非常損益
   * IFRS 停用
-
 * GrossProfit 營業毛利
 * IncomeAfterTaxes 稅後純益
   * IncomeAfterTax
     * 應該一樣
-
 * IncomeBeforeIncomeTax 稅前利潤
 * IncomeBeforeTaxFromContinuingOperations 繼續營業單位稅前淨利
 * IncomeFromContinuingOperations 繼續營業單位本期淨利（淨損）
@@ -275,7 +333,6 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
 * NoncontrollingInterests 綜合損益總額歸屬於非控制權益
 * OTHNOE 其他收益及費損淨額
   * other_nonoperating_expense_or_loss
-
 * OperatingExpenses 營業費用
 * OperatingIncome 營業收入淨額
 * OtherComprehensiveIncome 其他綜合損益
@@ -283,13 +340,11 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
 * RealizedGain 已實現銷貨（損）益
 * RealizedGainFromInterAffiliateAccounts 聯屬公司間已實現利益淨額
   * realized_gain_from_inter_affiliate_accounts
-
 * Revenue 營業收入
 * TAX 所得稅(利益)
 * TotalConsolidatedProfitForThePeriod 本期綜合損益總額
 * TotalNonbusinessIncome 營業外收入
   * total_nonbusiness_income
-
 * TotalNonoperatingIncomeAndExpense 營業外收入及支出
 * TotalnonbusinessExpenditure 營業外支出
 * UnrealizedGain 未實現損益
@@ -474,6 +529,9 @@ tick資料就是原始資料，當tick 資料蒐集完整之後，甚至能直�
     * 但是可以爬任意時間的資料
   * [股權分散表](https://mops.twse.com.tw/mops/web/t16sn02)
   * [/v1/opendata/1-5](https://openapi.tdcc.com.tw/tdcc-opendata-api-docs)
+    * [集保戶股權分散表 - 政府資料開放平臺](https://data.gov.tw/dataset/11452)
+      * 產生時點原則上為每周六9:00後產生
+    * https://openapi.tdcc.com.tw/v1/opendata/1-5
 * id
 * stock_id
 * date

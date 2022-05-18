@@ -76,14 +76,13 @@ def create_eqty_disps(eqty_disp_creates: List[schemas.EqtyDispCreate], db: Sessi
                 status_code=404, detail="stock not exist, create stock first")
 
     # 要確定pass in 的本身有無重複，其中start_ts是datetime
-    print('check repeat in request body')
+    # print('check repeat in request body')
     create_simp = [str(i.stock_id)+i.date.isoformat()
                    for i in eqty_disp_creates]
     if len(eqty_disp_creates) != len(set(create_simp)):
         raise HTTPException(
             status_code=400, detail="duplicate in request list.")
-
-    print('list duplicate in db')  # this process stuck
+    # print('list duplicate in db')  # this process stuck
     dupli_kdays = crud.list_eqty_disp_dupli(db=db, objs=eqty_disp_creates)
     if dupli_kdays:
         # 要不要直接create沒有重複的？

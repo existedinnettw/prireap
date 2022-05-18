@@ -11,6 +11,8 @@ from pytz import utc
 import warnings
 from urllib.parse import urljoin
 import json
+import numpy as np
+import subprocess
 
 load_dotenv()
 
@@ -33,18 +35,20 @@ load_dotenv()
 # Trading_turnover: 成交筆數, transaction
 # '''
 
-end_date = getenv('SCRIPT_END_DATE')
-start_date = getenv('SCRIPT_START_DATE')
+# end_date = getenv('SCRIPT_END_DATE')
+# start_date = getenv('SCRIPT_START_DATE')
+end_date = date.fromisoformat('2022-05-16')
+start_date = date.fromisoformat('2022-05-14')
 if end_date == None:
     end_date = datetime.utcnow().date()#-timedelta(days=1)
 if start_date == None:
     start_date = date.fromisoformat('2000-01-01')
 
 # it's possible already get some stocks, to skip them, indicate stock_li
-stock_skip_li=['2330','0050']
-stock_start_id=1038
+stock_skip_li=[]
+stock_start_id=283
 timeout=60*1
-API_HR_LIMIT=295
+# API_HR_LIMIT=295
 
 print("\nThe crawler will get data from {} to {}".format(
     start_date.isoformat(), end_date.isoformat()))
@@ -64,16 +68,33 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         api = DataLoader()
         # api.login_by_token(api_token=token)
         # api.login(user_id='user_id',password='password')
-        df = api.taiwan_stock_daily(
-            stock_id=symbol,
-            start_date=start_date,
-            end_date=end_date,
-            timeout=timeout
-        )
-        req_counter+=1
-        
+        while True:
+            try:
+                df = api.taiwan_stock_daily(
+                    stock_id=symbol,
+                    start_date=start_date,
+                    end_date=end_date,
+                    timeout=timeout
+                )
+                req_counter+=1
+            except Exception as e:
+                msg=e.args[0]
+                # print(e.args)
+                # print(e.__context__)
+                # print(type(msg))
+                if "Requests reach the upper limit" in msg:
+                    print("block by server, redial...")
+                    subprocess.call([r'C:\Users\exist\Desktop\redial.bat'])
+                    sleep(10)
+                    continue
+                else:
+                    raise Exception('unkown error')
+            break
         if not df.shape[0]:
-            warnings.warn("May be blocked by foreign server.", RuntimeWarning)
+            warnings.warn("May be blocked by server.", RuntimeWarning)
+        if df.empty:
+            print("no data, pass. check if 下市?")
+            continue
 
         #fastapi have bug on iso8601 datatime parsing
         df['date']=df['date']+'T'+time(hour=1, tzinfo=utc).isoformat()
@@ -83,9 +104,11 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         df['stock_id']=stock['id']
         df.rename(columns={'date': 'start_ts', 'max': 'high', 'min': 'low',
                 'Trading_Volume': 'volume', 'Trading_turnover': 'transaction'}, inplace=True)
-        df.drop(columns=['Trading_money'], inplace=True)
+        df=df.drop(columns=['Trading_money']).replace({np.nan: None})
+        # print(df)
+        # raise
 
-        # upload to local server
+        #--> upload to local server
     
         # # multi req ver
         # for record in df.iterrows():
@@ -128,20 +151,21 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
             print('symbol:{}, response text:{}'.format( symbol, info))
         except Exception as e:
             print(e)
+            raise Exception('unkown error, plz fix.')
+        sleep(1) #lighten load for foreign server
     else:
         print('passed')
         
 
-
-    # #同時執行兩個if 的coroutine
-    # if (idx+1) % 300 == 0:
-    #     time.sleep(60*60)  # sleep 1hr
-    # # raise
-    if req_counter+1>=API_HR_LIMIT:
-        if datetime.now()-cycle_start_dt>=timedelta(hours=1):
-            print('waiting for 300N/hr limit...')
-        while datetime.now()-cycle_start_dt>=timedelta(hours=1):
-            sleep(1)
-        cycle_start_dt=datetime.now()
-        req_counter=0
+    # # #同時執行兩個if 的coroutine
+    # # if (idx+1) % 300 == 0:
+    # #     time.sleep(60*60)  # sleep 1hr
+    # # # raise
+    # if req_counter+1>=API_HR_LIMIT:
+    #     if datetime.now()-cycle_start_dt>=timedelta(hours=1):
+    #         print('waiting for 300N/hr limit...')
+    #     while datetime.now()-cycle_start_dt>=timedelta(hours=1):
+    #         sleep(1)
+    #     cycle_start_dt=datetime.now()
+    #     req_counter=0
 

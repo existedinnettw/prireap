@@ -181,7 +181,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         df['stock_split']=df.apply(share_dvd_to_stock_split, axis=1)
         # print(df)
         df = df.drop(columns=['dvd_belong_year','cash_trade_date','share_trade_date','ref_cash_dvd_price','ref_share_dvd_price',])
-        df = df.rename(columns={'cash_sum_dvd':'dividends'})
+        df = df.rename(columns={'cash_sum_dvd':'dividends'}).replace({np.nan: None})
 
         # print(df)
         # raise
@@ -209,6 +209,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
             raise
         except Exception as e:
             print(e)
+            raise Exception('unkown error, plz fix.')
 
         #--> 各種delay避免鎖ip
         sleep(wait_time)

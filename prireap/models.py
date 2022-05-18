@@ -159,7 +159,7 @@ class CFS(Base):
     total_nonbusiness_expenditure=Column(BigInteger, nullable=True) #營業外支出
     unrealized_gain=Column(BigInteger, nullable=True) #未實現損益
     unrealized_gain_from_inter_affiliate_accounts=Column(BigInteger, nullable=True) #聯屬公司間未實現利益淨額
-    UniqueConstraint('stock_id', 'date', name='uq_cfs_stk_d')
+Index('consolid_stockid_date', CFS.stock_id, CFS.date, unique=True)
 
 class CashFlow(Base):
     '''
@@ -201,7 +201,7 @@ class CashFlow(Base):
     repayment_of_long_term_debt=Column(BigInteger, nullable=True)  #償還長期借款
     total_income_loss_items=Column(BigInteger, nullable=True) #收益費損項目合計
     unrealized_gain=Column(BigInteger, nullable=True) #未實現銷貨利益（損失）
-    UniqueConstraint('stock_id', 'date', name='uq_cf_stk_d')
+Index('cash_flow_stockid_date', CashFlow.stock_id, CashFlow.date, unique=True)
 
 class DvdEtSplt(Base):
     '''
@@ -215,7 +215,7 @@ class DvdEtSplt(Base):
     interval_annual_ratio=Column(Float, nullable=False)
     dividends=Column(Numeric(scale=2), nullable=True)
     stock_split=Column(Float, nullable=True)
-    UniqueConstraint('stock_id', 'trade_date', name='uq_dvds_stk_d')
+Index('dvd_et_splt_stockid_date', DvdEtSplt.stock_id, DvdEtSplt.trade_date, unique=True)
 
 class EqtyDispersion(Base):
     '''
@@ -257,7 +257,8 @@ class EqtyDispersion(Base):
     l15_nper = Column(Integer)
     l15_n = Column(BigInteger)
     diff_n = Column(BigInteger)
-    
+Index('eqty_disp_stockid_date', EqtyDispersion.stock_id, EqtyDispersion.date, unique=True) #can assign as temp, then create it.
+
 # class StockMrgShrt(Base):
 #     '''
 #     個股融資融劵表
@@ -280,6 +281,8 @@ if __name__ == '__main__':
     # Base.metadata.drop_all(engine, tables=[
     #                        Exchange.__table__, Stock.__table__, StockKMin.__table__, StockKHour.__table__, StockKDay.__table__], checkfirst=True)
     Base.metadata.create_all(bind=engine, checkfirst=True)  # create table
+    # t1.create(bind=engine)
+    # Base.metadata.tables
 
 
     # with SessionLocal() as session:

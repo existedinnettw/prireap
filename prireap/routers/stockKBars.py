@@ -232,14 +232,14 @@ def create_kbars(kbar_creates: List[schemas.StockKBarCreate], db: Session = Depe
             del kbar_creates[i].interval
 
         # 要確定pass in 的本身有無重複，其中start_ts是datetime
-        print('check repeat in request body')
+        # print('check repeat in request body')
         create_simp = [str(i.stock_id)+i.start_ts.isoformat()
                        for i in kbar_creates]
         if len(kbar_creates) != len(set(create_simp)):
             raise HTTPException(
                 status_code=400, detail="duplicate in request list.")
 
-        print('list duplicate in db') #this process stuck
+        # print('list duplicate in db') #this process stuck
         dupli_kdays = crud.list_kdays_dupli(db=db, stockKBars=kbar_creates)
         if dupli_kdays:
             # 要不要直接create沒有重複的？

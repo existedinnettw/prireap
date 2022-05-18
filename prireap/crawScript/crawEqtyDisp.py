@@ -24,7 +24,8 @@ load_dotenv()
 
 end_date = getenv('SCRIPT_END_DATE')
 start_date = getenv('SCRIPT_START_DATE')
-end_date = date(2022, 4, 22)
+start_date= date(2022, 4, 22)
+end_date = date(2022, 5, 10)
 if end_date == None:
     end_date = datetime.utcnow().date()  # -timedelta(days=1)
 if start_date == None:
@@ -33,7 +34,7 @@ if start_date == None:
 # it's possible already get some stocks, to skip them, indicate stock_li
 stock_skip_li = []  # ['2330','0050']
 stock_start_id = 1  # 2 #489
-timeout = 10
+timeout = 20
 # API_HR_LIMIT = 300
 
 print("\nThe crawler will get data from {} to {}".format(
@@ -56,21 +57,24 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         # api.login_by_token(api_token=token)
         # api.login(user_id='user_id',password='password')
         # print(start_date.isoformat())
-        try:
-            df = api.taiwan_stock_holding_shares_per(
-                stock_id=symbol,
-                start_date=start_date.isoformat(),
-                end_date=end_date.isoformat(),
-                timeout=timeout
-            )
-        except Exception as e:
-            msg = e.args[0]
-            if "Requests reach the upper limit" in msg:
-                print("block by server, redial...")
-                subprocess.call([r'C:\Users\exist\Desktop\redial.bat'])
-                sleep(10)
-            else:
-                raise Exception('unkown error')
+        while True:
+            try:
+                df = api.taiwan_stock_holding_shares_per(
+                    stock_id=symbol,
+                    start_date=start_date.isoformat(),
+                    end_date=end_date.isoformat(),
+                    timeout=timeout
+                )
+            except Exception as e:
+                msg = e.args[0]
+                if "Requests reach the upper limit" in msg:
+                    print("block by server, redial...")
+                    subprocess.call([r'C:\Users\exist\Desktop\redial.bat'])
+                    sleep(10)
+                    continue
+                else:
+                    raise Exception('unkown error')
+            break
         # req_counter += 1
 
         if not df.shape[0]:
@@ -100,7 +104,8 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
             '差異數調整（說明4）':'diff',
             'total':None,
         }
-        df['HoldingSharesLevel']=df['HoldingSharesLevel'].map(map_HoldingSharesLevel).drop(columns=['percent','stock_id'])
+        df['HoldingSharesLevel']=df['HoldingSharesLevel'].map(map_HoldingSharesLevel)
+        df=df.drop(columns=['percent','stock_id']) #stock_id are same
         df=df[~df['HoldingSharesLevel'].isnull()]
         # print(df)
         # raise
@@ -123,10 +128,14 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
             else:
                 new_df.loc[row['date'],col+'_n']=row['unit']
         df.apply(fill_vals, axis=1) #like a for loop
-        new_df=new_df.reset_index(drop=False)
+        new_df=new_df.reset_index(drop=False).replace({np.nan: None}) #json can handle none but not nan
         new_df['stock_id'] = stock_id
+        # new_df=new_df.fillna('')
         # print(new_df)
-        # print(np.any(new_df==None))
+        # nan_rows=new_df[new_df.isna().any(axis=1)]
+        # print(nan_rows[['l6_nper','l7_nper','l8_nper']])
+        # print(nan_rows)
+        # print(new_df.isnull().values.any())
         # raise
         # --> create dict for create request.
         body = new_df.to_dict(orient="records")
@@ -137,7 +146,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
         try:
             print('upload to local...')
             response = requests.post(
-                urljoin(getenv('SERVER_URL'), 'composite/eqty_disp/'), json=body, timeout=timeout)
+                urljoin(getenv('SERVER_URL'), 'composite/eqty_disp/'), json=body, timeout=timeout*3)
             response.raise_for_status()
             # print('sucess to add new {} (stock_id:{}) kday to local server.'.format( stock['symbol'], stock['id']))
         except requests.exceptions.HTTPError as e:  # e.g. 400, 401, 404...
@@ -148,6 +157,7 @@ for idx, stock in enumerate(df_local_stocks.iterrows()):
             raise Exception('local server error, plz fix.')
         except Exception as e:
             print(e)
+            raise Exception('unkown error, plz fix.')
         # raise
         sleep(3)
     else:
